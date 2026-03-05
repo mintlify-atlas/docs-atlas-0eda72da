@@ -1,0 +1,102 @@
+{
+  "projectType": "general",
+  "projectName": "Patient Manager",
+  "projectDescription": "A desktop application for managing patient records and clinical histories in healthcare settings.",
+  "theme": "linden",
+  "primaryColor": "#0891b2",
+  "lightColor": "#06b6d4",
+  "darkColor": "#0e7490",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "User Guide",
+            "pages": [
+              "guide/patient-management",
+              "guide/clinical-histories",
+              "guide/sessions",
+              "guide/patient-relatives",
+              "guide/themes"
+            ]
+          },
+          {
+            "group": "Data Model",
+            "pages": [
+              "model/overview",
+              "model/patient",
+              "model/clinical-history",
+              "model/session",
+              "model/relative"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "dev/setup",
+              "dev/architecture",
+              "dev/database",
+              "dev/gui-components",
+              "dev/customization"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Services",
+            "pages": [
+              "api/service-manager",
+              "api/patient-service",
+              "api/session-service",
+              "api/clinical-history-service",
+              "api/relative-service"
+            ]
+          },
+          {
+            "group": "Repositories",
+            "pages": [
+              "api/repositories"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Patient registration and management",
+    "Clinical history tracking and documentation",
+    "Session scheduling and billing management",
+    "Patient relatives and relationships tracking",
+    "Customizable themes (Classic, Modern, Dracula)",
+    "SQLite database with JPA/Hibernate",
+    "Desktop GUI with Java Swing"
+  ],
+  "publicApiSurface": [
+    "ServiceManager",
+    "PatientService.save()",
+    "PatientService.findAll()",
+    "PatientService.findById()",
+    "SessionService.save()",
+    "SessionService.findByPatient()",
+    "ClinicalHistoryService.save()",
+    "ClinicalHistoryService.findByCode()",
+    "RelativeService.save()",
+    "RelativeService.findByPatient()",
+    "ThemeManager.setTheme()",
+    "AppTheme.CLASSIC",
+    "AppTheme.MODERN",
+    "AppTheme.DRACULA"
+  ]
+}
