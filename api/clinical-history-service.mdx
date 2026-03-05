@@ -350,7 +350,11 @@ The repository handles:
 
 ## Related Services
 
-- [ServiceManager](/api/service-manager) - Access point for all services
+<Note>
+  ClinicalHistoryService is instantiated independently and is not managed by ServiceManager. Create an instance directly with an EntityManagerFactory.
+</Note>
+
+- [ServiceManager](/api/service-manager) - Manages other core services (Patient, Session, Relative)
 - [PatientService](/api/patient-service) - Patient data associated with histories
 - [SessionService](/api/session-service) - Session scheduling related to history records
 
