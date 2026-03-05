@@ -1,0 +1,343 @@
+---
+title: Development Setup
+description: Set up your development environment for Patient Manager
+---
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Java Development Kit (JDK) 19+**
+- **Apache Maven 3.6+**
+- **Git** for version control
+- **IDE** (NetBeans, IntelliJ IDEA, or Eclipse)
+
+## Clone the Repository
+
+```bash
+git clone <repository-url>
+cd patientManager
+```
+
+## Project Structure
+
+The project follows a standard Maven structure:
+
+```
+patientManager/
+├── pom.xml                           # Maven build configuration
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   ├── com.bo.patientmanager/
+│   │   │   │   ├── PatientManager.java      # Main entry point
+│   │   │   │   ├── model/                   # JPA entities
+│   │   │   │   ├── repository/              # Data access layer
+│   │   │   │   ├── service/                 # Business logic layer
+│   │   │   │   └── gui/                     # Swing UI components
+│   │   │   ├── persistence/
+│   │   │   │   └── JPAUtil.java            # JPA configuration
+│   │   │   └── utils/                      # Utility classes
+│   │   └── resources/
+│   │       ├── META-INF/
+│   │       │   └── persistence.xml         # JPA configuration
+│   │       ├── data/
+│   │       │   └── patient.db              # SQLite database template
+│   │       └── public/                     # Images, icons, themes
+│   └── test/                               # Unit tests
+└── target/                                  # Build output
+```
+
+## Maven Dependencies
+
+The project uses the following key dependencies (from `pom.xml:14-68`):
+
+### Core Framework
+
+```xml
+<!-- JPA + Hibernate -->
+<dependency>
+    <groupId>org.hibernate.orm</groupId>
+    <artifactId>hibernate-core</artifactId>
+    <version>6.4.4.Final</version>
+</dependency>
+
+<dependency>
+    <groupId>jakarta.persistence</groupId>
+    <artifactId>jakarta.persistence-api</artifactId>
+    <version>3.1.0</version>
+</dependency>
+```
+
+### Database
+
+```xml
+<!-- SQLite Driver -->
+<dependency>
+    <groupId>org.xerial</groupId>
+    <artifactId>sqlite-jdbc</artifactId>
+    <version>3.45.1.0</version>
+</dependency>
+
+<!-- SQLite Dialect for Hibernate -->
+<dependency>
+    <groupId>org.hibernate.orm</groupId>
+    <artifactId>hibernate-community-dialects</artifactId>
+    <version>6.4.4.Final</version>
+</dependency>
+```
+
+### UI Components
+
+```xml
+<!-- FlatLaf - Modern Look and Feel -->
+<dependency>
+    <groupId>com.formdev</groupId>
+    <artifactId>flatlaf</artifactId>
+    <version>3.4</version>
+</dependency>
+
+<!-- JCalendar - Date Picker -->
+<dependency>
+    <groupId>com.toedter</groupId>
+    <artifactId>jcalendar</artifactId>
+    <version>1.4</version>
+</dependency>
+
+<!-- AbsoluteLayout for NetBeans GUI Builder -->
+<dependency>
+    <groupId>org.netbeans.external</groupId>
+    <artifactId>AbsoluteLayout</artifactId>
+    <version>RELEASE170</version>
+</dependency>
+```
+
+### Logging
+
+```xml
+<!-- SLF4J Simple Logger -->
+<dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>slf4j-simple</artifactId>
+    <version>2.0.7</version>
+</dependency>
+```
+
+## Building from Source
+
+### Compile the Project
+
+```bash
+mvn clean compile
+```
+
+### Run Tests
+
+```bash
+mvn test
+```
+
+### Package as JAR
+
+```bash
+mvn clean package
+```
+
+This creates an executable JAR in `target/patientManager-1.0-SNAPSHOT.jar`.
+
+### Run the Application
+
+```bash
+mvn exec:java
+```
+
+Or run the JAR directly:
+
+```bash
+java -jar target/patientManager-1.0-SNAPSHOT.jar
+```
+
+## IDE Configuration
+
+### NetBeans
+
+1. **Open Project**: File → Open Project → Select `patientManager` folder
+2. **Build**: Right-click project → Build
+3. **Run**: Right-click project → Run
+4. **GUI Designer**: NetBeans includes visual form designer for Swing components
+
+### IntelliJ IDEA
+
+1. **Import Project**: File → Open → Select `pom.xml`
+2. **Configure JDK**: File → Project Structure → Project SDK → Select JDK 19+
+3. **Build**: Build → Build Project
+4. **Run**: Run → Run 'PatientManager'
+5. **Enable Annotation Processing**: Settings → Build → Compiler → Annotation Processors
+
+### Eclipse
+
+1. **Import Maven Project**: File → Import → Maven → Existing Maven Projects
+2. **Select Project**: Browse to `patientManager` folder
+3. **Build**: Project → Build Project
+4. **Run**: Right-click `PatientManager.java` → Run As → Java Application
+
+## Development Database
+
+The application uses SQLite with a user-specific database location.
+
+### Database Location
+
+The database is automatically created at:
+
+```
+~/.patientManager/patient.db
+```
+
+On Windows:
+```
+C:\Users\<username>\.patientManager\patient.db
+```
+
+On Linux/Mac:
+```
+/home/<username>/.patientManager/patient.db
+```
+
+### Database Initialization
+
+The `JPAUtil` class handles database initialization (from `JPAUtil.java:26-54`):
+
+```java
+Path appData = Paths.get(System.getProperty("user.home"), ".patientManager");
+Path dbFile = appData.resolve("patient.db");
+
+try {
+    if (!Files.exists(appData)) {
+        Files.createDirectories(appData);
+    }
+
+    // Copy db from JAR if not exists
+    if (!Files.exists(dbFile)) {
+        try (InputStream is = JPAUtil.class.getResourceAsStream("/data/patient.db")) {
+            if (is == null) {
+                throw new FileNotFoundException("Database template not found");
+            }
+            Files.copy(is, dbFile);
+        }
+    }
+} catch (IOException e) {
+    throw new RuntimeException("Error preparing database", e);
+}
+```
+
+### Resetting the Database
+
+To reset your development database:
+
+```bash
+# Delete the existing database
+rm ~/.patientManager/patient.db
+
+# Run the application (it will recreate from template)
+mvn exec:java
+```
+
+## Code Style Guidelines
+
+### Naming Conventions
+
+- **Classes**: PascalCase (e.g., `PatientService`, `BaseRepository`)
+- **Methods**: camelCase (e.g., `findById`, `createPatient`)
+- **Variables**: camelCase (e.g., `patientId`, `entityManager`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_RETRY_COUNT`)
+
+### Package Organization
+
+- `model` - JPA entity classes
+- `repository` - Data access objects (DAOs)
+- `service` - Business logic
+- `gui` - Swing UI components
+- `gui.component` - Custom reusable UI components
+- `gui.theme` - Theme management
+- `utils` - Utility classes
+
+### Code Documentation
+
+Use JavaDoc for public APIs:
+
+```java
+/**
+ * Service class for managing patient operations.
+ * Provides CRUD operations and business logic for patients.
+ */
+public class PatientService {
+    
+    /**
+     * Creates a new patient in the database.
+     * 
+     * @param patient The patient entity to create
+     * @return The persisted patient with generated ID
+     */
+    public Patient create(Patient patient) {
+        return patientRepository.create(patient);
+    }
+}
+```
+
+## Troubleshooting
+
+### Maven Build Fails
+
+**Problem**: Dependencies cannot be downloaded
+
+**Solution**:
+```bash
+mvn clean install -U
+```
+
+### Database Lock Errors
+
+**Problem**: "Database is locked" error
+
+**Solution**:
+- Close all other instances of the application
+- Check for zombie processes: `ps aux | grep java`
+- Delete lock files in `~/.patientManager/`
+
+### UI Rendering Issues
+
+**Problem**: Components not displaying correctly
+
+**Solution**:
+- Ensure FlatLaf is properly initialized
+- Check theme resources are accessible
+- Verify Java version compatibility (requires JDK 19+)
+
+### JPA Configuration Errors
+
+**Problem**: EntityManager creation fails
+
+**Solution**:
+- Verify `persistence.xml` is in `src/main/resources/META-INF/`
+- Check database file permissions
+- Review Hibernate logs for detailed errors
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="diagram-project" href="/dev/architecture">
+    Understand the application architecture and design patterns
+  </Card>
+  
+  <Card title="Database Configuration" icon="database" href="/dev/database">
+    Learn about JPA/Hibernate setup and entity management
+  </Card>
+  
+  <Card title="GUI Components" icon="window-maximize" href="/dev/gui-components">
+    Explore custom UI components and theme system
+  </Card>
+  
+  <Card title="Customization" icon="palette" href="/dev/customization">
+    Customize and extend the application
+  </Card>
+</CardGroup>

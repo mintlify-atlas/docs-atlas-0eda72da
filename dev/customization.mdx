@@ -1,0 +1,912 @@
+---
+title: Customization Guide
+description: Extend and customize Patient Manager for your needs
+---
+
+## Overview
+
+Patient Manager is designed to be easily customizable and extensible. This guide shows you how to:
+
+- Add new themes
+- Create custom entities
+- Add new views
+- Extend business logic
+- Customize the UI
+
+## Adding New Themes
+
+### 1. Create Theme Definition
+
+Add a new theme to the `AppTheme` enum (`AppTheme.java`):
+
+```java
+public enum AppTheme {
+    // Existing themes...
+    
+    OCEAN(
+        false,                              // Light theme
+        "/public/bg/bg_ocean.jpg",         // Background image
+        "/public/bg/bg_ocean_menu.jpg",    // Menu background
+        new Color(41, 128, 185),            // Primary: Ocean blue
+        new Color(236, 240, 241),           // Secondary: Light gray
+        new Color(52, 152, 219),            // Tertiary: Lighter blue
+        new Font("Arial", Font.PLAIN, 14)   // Font
+    );
+    
+    // Theme properties
+    public final boolean dark;
+    public final String background;
+    public final String menuBg;
+    public final Color primary;
+    public final Color secondary;
+    public final Color tertiary;
+    public final Font font;
+}
+```
+
+### 2. Add Background Images
+
+Place your images in `src/main/resources/public/bg/`:
+
+```
+src/main/resources/public/bg/
+├── bg_ocean.jpg         (1280x720 or larger)
+└── bg_ocean_menu.jpg    (1280x100 or larger)
+```
+
+### 3. Use the New Theme
+
+```java
+// In application
+ThemeManager.setTheme(AppTheme.OCEAN);
+
+// Or in ThemePickerPane
+JButton oceanButton = new JButton("Ocean");
+oceanButton.addActionListener(e -> 
+    ThemeManager.setTheme(AppTheme.OCEAN)
+);
+```
+
+### Theme Color Guidelines
+
+- **Primary**: Main accent color (buttons, highlights)
+- **Secondary**: Background/surface color
+- **Tertiary**: Supporting color (borders, icons)
+- **Font**: Should be readable on secondary color
+
+## Adding New Entities
+
+### 1. Create Entity Class
+
+Create a new entity in `com.bo.patientmanager.model`:
+
+```java
+package com.bo.patientmanager.model;
+
+import jakarta.persistence.*;
+import java.util.Date;
+
+@Entity
+public class Appointment {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long appointmentId;
+    
+    @ManyToOne
+    private Patient patient;
+    
+    private Date appointmentDate;
+    private String appointmentType;
+    private Integer durationMinutes;
+    
+    @Column(length = 1000)
+    private String notes;
+    
+    private boolean confirmed;
+    private boolean completed;
+    
+    // Constructors
+    public Appointment() {}
+    
+    public Appointment(Patient patient, Date appointmentDate, 
+                      String appointmentType, Integer durationMinutes) {
+        this.patient = patient;
+        this.appointmentDate = appointmentDate;
+        this.appointmentType = appointmentType;
+        this.durationMinutes = durationMinutes;
+        this.confirmed = false;
+        this.completed = false;
+    }
+    
+    // Getters and setters
+    public Long getAppointmentId() {
+        return appointmentId;
+    }
+    
+    public void setAppointmentId(Long appointmentId) {
+        this.appointmentId = appointmentId;
+    }
+    
+    public Patient getPatient() {
+        return patient;
+    }
+    
+    public void setPatient(Patient patient) {
+        this.patient = patient;
+    }
+    
+    // ... other getters/setters
+}
+```
+
+### 2. Create Repository
+
+Create repository in `com.bo.patientmanager.repository`:
+
+```java
+package com.bo.patientmanager.repository;
+
+import com.bo.patientmanager.model.Appointment;
+import jakarta.persistence.EntityManagerFactory;
+import java.util.Date;
+import java.util.List;
+
+public class AppointmentRepository extends BaseRepository {
+    
+    public AppointmentRepository(EntityManagerFactory emf) {
+        super(emf);
+    }
+    
+    public Appointment create(Appointment appointment) {
+        return execute(em -> {
+            em.persist(appointment);
+            return appointment;
+        });
+    }
+    
+    public Appointment update(Appointment appointment) {
+        return execute(em -> em.merge(appointment));
+    }
+    
+    public void delete(Long id) {
+        execute(em -> {
+            Appointment a = em.find(Appointment.class, id);
+            if (a != null) {
+                em.remove(a);
+            }
+            return null;
+        });
+    }
+    
+    public Appointment findById(Long id) {
+        return execute(em -> em.find(Appointment.class, id));
+    }
+    
+    public List<Appointment> findAll() {
+        return execute(em ->
+            em.createQuery("FROM Appointment ORDER BY appointmentDate", 
+                          Appointment.class)
+              .getResultList()
+        );
+    }
+    
+    public List<Appointment> findByPatient(Long patientId) {
+        return execute(em ->
+            em.createQuery(
+                "SELECT a FROM Appointment a WHERE a.patient.patientId = :patientId " +
+                "ORDER BY a.appointmentDate",
+                Appointment.class
+            )
+            .setParameter("patientId", patientId)
+            .getResultList()
+        );
+    }
+    
+    public List<Appointment> findByDateRange(Date startDate, Date endDate) {
+        return execute(em ->
+            em.createQuery(
+                "SELECT a FROM Appointment a " +
+                "WHERE a.appointmentDate BETWEEN :start AND :end " +
+                "ORDER BY a.appointmentDate",
+                Appointment.class
+            )
+            .setParameter("start", startDate)
+            .setParameter("end", endDate)
+            .getResultList()
+        );
+    }
+}
+```
+
+### 3. Create Service
+
+Create service in `com.bo.patientmanager.service`:
+
+```java
+package com.bo.patientmanager.service;
+
+import com.bo.patientmanager.model.Appointment;
+import com.bo.patientmanager.repository.AppointmentRepository;
+import jakarta.persistence.EntityManagerFactory;
+import java.util.Date;
+import java.util.List;
+
+public class AppointmentService {
+    
+    private final AppointmentRepository appointmentRepository;
+    
+    public AppointmentService(EntityManagerFactory emf) {
+        this.appointmentRepository = new AppointmentRepository(emf);
+    }
+    
+    public Appointment create(Appointment appointment) {
+        return appointmentRepository.create(appointment);
+    }
+    
+    public Appointment update(Appointment appointment) {
+        return appointmentRepository.update(appointment);
+    }
+    
+    public void delete(Long id) {
+        appointmentRepository.delete(id);
+    }
+    
+    public Appointment findById(Long id) {
+        return appointmentRepository.findById(id);
+    }
+    
+    public List<Appointment> findAll() {
+        return appointmentRepository.findAll();
+    }
+    
+    public List<Appointment> findByPatient(Long patientId) {
+        return appointmentRepository.findByPatient(patientId);
+    }
+    
+    public List<Appointment> findUpcoming() {
+        Date now = new Date();
+        Date future = new Date(now.getTime() + 30L * 24 * 60 * 60 * 1000); // 30 days
+        return appointmentRepository.findByDateRange(now, future);
+    }
+    
+    public void confirmAppointment(Long appointmentId) {
+        Appointment appointment = findById(appointmentId);
+        if (appointment != null) {
+            appointment.setConfirmed(true);
+            update(appointment);
+        }
+    }
+    
+    public void completeAppointment(Long appointmentId) {
+        Appointment appointment = findById(appointmentId);
+        if (appointment != null) {
+            appointment.setCompleted(true);
+            update(appointment);
+        }
+    }
+}
+```
+
+### 4. Register Service in ServiceManager
+
+Update `ServiceManager.java`:
+
+```java
+public class ServiceManager {
+    EntityManagerFactory em = null;
+    private PatientService patientService = null;
+    private SessionService sessionService = null;
+    private AppointmentService appointmentService = null; // Add this
+    // ... other services
+    
+    public ServiceManager(EntityManagerFactory em) {
+        this.em = em;
+        patientService = new PatientService(em);
+        sessionService = new SessionService(em);
+        appointmentService = new AppointmentService(em); // Initialize
+        // ... other services
+    }
+    
+    public AppointmentService getAppointmentService() {
+        return appointmentService;
+    }
+    
+    // ... other getters
+}
+```
+
+### 5. Database Schema
+
+Hibernate will automatically create the table when you run the application (with `hibernate.hbm2ddl.auto=update`).
+
+The generated table will look like:
+
+```sql
+CREATE TABLE Appointment (
+    appointmentId INTEGER PRIMARY KEY AUTOINCREMENT,
+    patient_patientId INTEGER,
+    appointmentDate TIMESTAMP,
+    appointmentType VARCHAR(255),
+    durationMinutes INTEGER,
+    notes VARCHAR(1000),
+    confirmed BOOLEAN,
+    completed BOOLEAN,
+    FOREIGN KEY (patient_patientId) REFERENCES Patient(patientId)
+);
+```
+
+## Adding New Views
+
+### 1. Create View Panel
+
+Create a new panel in `com.bo.patientmanager.gui`:
+
+```java
+package com.bo.patientmanager.gui;
+
+import com.bo.patientmanager.model.Appointment;
+import com.bo.patientmanager.service.ServiceManager;
+import javax.swing.*;
+import java.awt.*;
+import java.util.List;
+
+public class AppointmentListPane extends JPanel {
+    
+    private ServiceManager serviceManager;
+    private JList<String> appointmentList;
+    private DefaultListModel<String> listModel;
+    
+    public AppointmentListPane(ServiceManager serviceManager) {
+        this.serviceManager = serviceManager;
+        initComponents();
+        loadAppointments();
+    }
+    
+    private void initComponents() {
+        setLayout(new BorderLayout());
+        
+        // Title
+        JLabel titleLabel = new JLabel("Upcoming Appointments");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        add(titleLabel, BorderLayout.NORTH);
+        
+        // List
+        listModel = new DefaultListModel<>();
+        appointmentList = new JList<>(listModel);
+        appointmentList.setFont(new Font("Arial", Font.PLAIN, 14));
+        
+        JScrollPane scrollPane = new JScrollPane(appointmentList);
+        add(scrollPane, BorderLayout.CENTER);
+        
+        // Buttons
+        JPanel buttonPanel = new JPanel();
+        JButton refreshButton = new JButton("Refresh");
+        refreshButton.addActionListener(e -> loadAppointments());
+        buttonPanel.add(refreshButton);
+        
+        JButton newButton = new JButton("New Appointment");
+        newButton.addActionListener(e -> createNewAppointment());
+        buttonPanel.add(newButton);
+        
+        add(buttonPanel, BorderLayout.SOUTH);
+    }
+    
+    private void loadAppointments() {
+        listModel.clear();
+        
+        List<Appointment> appointments = serviceManager
+            .getAppointmentService()
+            .findUpcoming();
+        
+        for (Appointment apt : appointments) {
+            String item = String.format("%s - %s (%d min) - %s",
+                apt.getAppointmentDate().toString(),
+                apt.getPatient().getName() + " " + apt.getPatient().getLastName(),
+                apt.getDurationMinutes(),
+                apt.isConfirmed() ? "Confirmed" : "Pending"
+            );
+            listModel.addElement(item);
+        }
+    }
+    
+    private void createNewAppointment() {
+        // Open appointment creation form
+        JOptionPane.showMessageDialog(this, "New appointment form would open here");
+    }
+}
+```
+
+### 2. Add Navigation Button
+
+Update `MainWindow.java` to add a button for the new view:
+
+```java
+// In initComponents() (or use NetBeans GUI Builder)
+JButton btnAppointments = new JButton("Appointments");
+btnAppointments.addActionListener(e -> btnAppointmentsActionPerformed(e));
+menuBg.add(btnAppointments, constraints);
+
+// Event handler
+private void btnAppointmentsActionPerformed(ActionEvent evt) {
+    bgContent.setView(new AppointmentListPane(serviceManager));
+}
+```
+
+## Extending Business Logic
+
+### Custom Validation
+
+Add validation methods to services:
+
+```java
+public class PatientService {
+    // ... existing methods
+    
+    public void validatePatient(Patient patient) throws ValidationException {
+        if (patient.getName() == null || patient.getName().trim().isEmpty()) {
+            throw new ValidationException("Patient name is required");
+        }
+        
+        if (patient.getBirthday() == null) {
+            throw new ValidationException("Patient birthday is required");
+        }
+        
+        if (patient.getBirthday().after(new Date())) {
+            throw new ValidationException("Birthday cannot be in the future");
+        }
+    }
+    
+    public Patient create(Patient patient) throws ValidationException {
+        validatePatient(patient);
+        return patientRepository.create(patient);
+    }
+}
+
+// Custom exception
+public class ValidationException extends Exception {
+    public ValidationException(String message) {
+        super(message);
+    }
+}
+```
+
+### Business Rules
+
+Add business logic methods:
+
+```java
+public class AppointmentService {
+    // ... existing methods
+    
+    public boolean hasConflict(Appointment appointment) {
+        Date start = appointment.getAppointmentDate();
+        Date end = new Date(start.getTime() + 
+            appointment.getDurationMinutes() * 60 * 1000L);
+        
+        List<Appointment> existing = appointmentRepository
+            .findByDateRange(start, end);
+        
+        return !existing.isEmpty();
+    }
+    
+    public Appointment scheduleAppointment(Appointment appointment) 
+            throws ValidationException {
+        if (hasConflict(appointment)) {
+            throw new ValidationException(
+                "Appointment conflicts with existing appointment");
+        }
+        return create(appointment);
+    }
+    
+    public List<Appointment> findOverdue() {
+        return execute(em ->
+            em.createQuery(
+                "SELECT a FROM Appointment a " +
+                "WHERE a.appointmentDate < :now " +
+                "AND a.completed = false",
+                Appointment.class
+            )
+            .setParameter("now", new Date())
+            .getResultList()
+        );
+    }
+}
+```
+
+## Customizing UI Components
+
+### Custom Table Cell Renderer
+
+Create custom renderers for JTable:
+
+```java
+public class StatusCellRenderer extends DefaultTableCellRenderer {
+    @Override
+    public Component getTableCellRendererComponent(
+            JTable table, Object value, boolean isSelected, 
+            boolean hasFocus, int row, int column) {
+        
+        Component cell = super.getTableCellRendererComponent(
+            table, value, isSelected, hasFocus, row, column);
+        
+        String status = (String) value;
+        
+        if ("ACTIVO".equals(status)) {
+            cell.setBackground(new Color(46, 204, 113)); // Green
+        } else if ("ALTA".equals(status)) {
+            cell.setBackground(new Color(52, 152, 219)); // Blue
+        } else if ("ABANDONO".equals(status)) {
+            cell.setBackground(new Color(231, 76, 60));  // Red
+        }
+        
+        cell.setForeground(Color.WHITE);
+        return cell;
+    }
+}
+
+// Usage
+JTable table = new JTable(tableModel);
+table.getColumnModel()
+     .getColumn(columnIndex)
+     .setCellRenderer(new StatusCellRenderer());
+```
+
+### Custom Dialog
+
+```java
+public class AppointmentDialog extends JDialog {
+    private JTextField patientField;
+    private JDateChooser dateChooser;
+    private JSpinner durationSpinner;
+    private Appointment result;
+    
+    public AppointmentDialog(Frame parent) {
+        super(parent, "New Appointment", true);
+        initComponents();
+        setLocationRelativeTo(parent);
+    }
+    
+    private void initComponents() {
+        setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.anchor = GridBagConstraints.WEST;
+        
+        // Patient field
+        gbc.gridx = 0; gbc.gridy = 0;
+        add(new JLabel("Patient:"), gbc);
+        
+        gbc.gridx = 1;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        patientField = new JTextField(20);
+        add(patientField, gbc);
+        
+        // Date chooser
+        gbc.gridx = 0; gbc.gridy = 1;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.weightx = 0;
+        add(new JLabel("Date:"), gbc);
+        
+        gbc.gridx = 1;
+        dateChooser = new JDateChooser();
+        dateChooser.setMinSelectableDate(new Date());
+        add(dateChooser, gbc);
+        
+        // Duration spinner
+        gbc.gridx = 0; gbc.gridy = 2;
+        add(new JLabel("Duration (min):"), gbc);
+        
+        gbc.gridx = 1;
+        SpinnerModel spinnerModel = new SpinnerNumberModel(30, 15, 180, 15);
+        durationSpinner = new JSpinner(spinnerModel);
+        add(durationSpinner, gbc);
+        
+        // Buttons
+        gbc.gridx = 0; gbc.gridy = 3;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        
+        JPanel buttonPanel = new JPanel();
+        JButton okButton = new JButton("OK");
+        okButton.addActionListener(e -> onOk());
+        buttonPanel.add(okButton);
+        
+        JButton cancelButton = new JButton("Cancel");
+        cancelButton.addActionListener(e -> dispose());
+        buttonPanel.add(cancelButton);
+        
+        add(buttonPanel, gbc);
+        
+        pack();
+    }
+    
+    private void onOk() {
+        // Create appointment from form data
+        result = new Appointment();
+        result.setAppointmentDate(dateChooser.getDate());
+        result.setDurationMinutes((Integer) durationSpinner.getValue());
+        dispose();
+    }
+    
+    public Appointment showDialog() {
+        setVisible(true);
+        return result;
+    }
+}
+
+// Usage
+AppointmentDialog dialog = new AppointmentDialog(mainFrame);
+Appointment newAppointment = dialog.showDialog();
+if (newAppointment != null) {
+    serviceManager.getAppointmentService().create(newAppointment);
+}
+```
+
+## Configuration Files
+
+### Application Properties
+
+Create a properties file for configuration:
+
+```properties
+# application.properties
+app.name=Patient Manager
+app.version=1.0.0
+app.theme=CLASSIC
+
+# Database
+db.path=${user.home}/.patientManager/patient.db
+db.backup.enabled=true
+db.backup.interval=7
+
+# UI
+ui.window.width=1280
+ui.window.height=820
+ui.window.resizable=false
+
+# Features
+feature.appointments=true
+feature.billing=false
+feature.reports=true
+```
+
+### Loading Configuration
+
+```java
+public class AppConfig {
+    private static Properties properties;
+    
+    static {
+        properties = new Properties();
+        try (InputStream is = AppConfig.class
+                .getResourceAsStream("/application.properties")) {
+            properties.load(is);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public static String get(String key) {
+        return properties.getProperty(key);
+    }
+    
+    public static String get(String key, String defaultValue) {
+        return properties.getProperty(key, defaultValue);
+    }
+    
+    public static boolean getBoolean(String key) {
+        return Boolean.parseBoolean(properties.getProperty(key));
+    }
+    
+    public static int getInt(String key) {
+        return Integer.parseInt(properties.getProperty(key));
+    }
+}
+
+// Usage
+String theme = AppConfig.get("app.theme", "CLASSIC");
+ThemeManager.setTheme(AppTheme.valueOf(theme));
+
+if (AppConfig.getBoolean("feature.appointments")) {
+    // Show appointments menu
+}
+```
+
+## Internationalization (i18n)
+
+### Resource Bundles
+
+Create message bundles:
+
+```properties
+# messages_en.properties
+app.title=Patient Manager
+menu.patients=Patients
+menu.appointments=Appointments
+menu.search=Search
+button.save=Save
+button.cancel=Cancel
+message.saved=Saved successfully
+
+# messages_es.properties
+app.title=Gestor de Pacientes
+menu.patients=Pacientes
+menu.appointments=Citas
+menu.search=Buscar
+button.save=Guardar
+button.cancel=Cancelar
+message.saved=Guardado exitosamente
+```
+
+### Message Manager
+
+```java
+public class Messages {
+    private static ResourceBundle bundle;
+    
+    static {
+        Locale locale = new Locale("es"); // or get from config
+        bundle = ResourceBundle.getBundle("messages", locale);
+    }
+    
+    public static String get(String key) {
+        return bundle.getString(key);
+    }
+    
+    public static void setLocale(Locale locale) {
+        bundle = ResourceBundle.getBundle("messages", locale);
+    }
+}
+
+// Usage
+JButton saveButton = new JButton(Messages.get("button.save"));
+JOptionPane.showMessageDialog(this, Messages.get("message.saved"));
+```
+
+## Plugin System
+
+Create a basic plugin system:
+
+```java
+// Plugin interface
+public interface Plugin {
+    String getName();
+    String getVersion();
+    void initialize(ServiceManager serviceManager);
+    JPanel getPanel();
+}
+
+// Plugin loader
+public class PluginLoader {
+    private List<Plugin> plugins = new ArrayList<>();
+    
+    public void loadPlugins(String pluginDir) {
+        File dir = new File(pluginDir);
+        if (!dir.exists()) return;
+        
+        File[] jars = dir.listFiles((d, name) -> name.endsWith(".jar"));
+        if (jars == null) return;
+        
+        for (File jar : jars) {
+            try {
+                URLClassLoader loader = new URLClassLoader(
+                    new URL[]{jar.toURI().toURL()}
+                );
+                
+                // Load plugin class (from JAR manifest or convention)
+                // Class<?> pluginClass = loader.loadClass("...");
+                // Plugin plugin = (Plugin) pluginClass.newInstance();
+                // plugins.add(plugin);
+                
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    public List<Plugin> getPlugins() {
+        return plugins;
+    }
+}
+```
+
+## Best Practices
+
+### 1. Follow Existing Patterns
+
+When adding new features, follow the existing architecture:
+- Entity → Repository → Service → UI
+- Use `BaseRepository.execute()` for transactions
+- Register services in `ServiceManager`
+
+### 2. Test Your Changes
+
+```java
+// Unit test example
+public class AppointmentServiceTest {
+    private AppointmentService service;
+    
+    @Before
+    public void setUp() {
+        EntityManagerFactory emf = JPAUtil.getEntityManagerFactory();
+        service = new AppointmentService(emf);
+    }
+    
+    @Test
+    public void testCreateAppointment() {
+        Appointment apt = new Appointment();
+        apt.setAppointmentDate(new Date());
+        apt.setDurationMinutes(30);
+        
+        Appointment saved = service.create(apt);
+        assertNotNull(saved.getAppointmentId());
+    }
+}
+```
+
+### 3. Document Your Code
+
+Add JavaDoc comments:
+
+```java
+/**
+ * Service for managing patient appointments.
+ * Provides scheduling, confirmation, and conflict detection.
+ * 
+ * @author Your Name
+ * @version 1.0
+ */
+public class AppointmentService {
+    /**
+     * Schedules a new appointment after checking for conflicts.
+     * 
+     * @param appointment The appointment to schedule
+     * @return The persisted appointment with generated ID
+     * @throws ValidationException if appointment conflicts with existing appointment
+     */
+    public Appointment scheduleAppointment(Appointment appointment) 
+            throws ValidationException {
+        // ...
+    }
+}
+```
+
+### 4. Handle Errors Gracefully
+
+```java
+try {
+    appointment = service.scheduleAppointment(appointment);
+    CustomMessageDialog.showInfo(this, "Appointment scheduled!");
+} catch (ValidationException e) {
+    CustomMessageDialog.showError(this, e.getMessage());
+} catch (Exception e) {
+    e.printStackTrace();
+    CustomMessageDialog.showError(this, 
+        "Unexpected error: " + e.getMessage());
+}
+```
+
+### 5. Version Your Changes
+
+Use git to track changes:
+
+```bash
+git add .
+git commit -m "Add appointment scheduling feature"
+git tag v1.1.0
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Development Setup" icon="code" href="/dev/setup">
+    Review development environment setup
+  </Card>
+  
+  <Card title="Architecture" icon="diagram-project" href="/dev/architecture">
+    Understand the application architecture
+  </Card>
+</CardGroup>

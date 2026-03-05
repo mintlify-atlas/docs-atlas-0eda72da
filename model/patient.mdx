@@ -1,0 +1,348 @@
+---
+title: "Patient Entity"
+description: "Complete documentation of the Patient entity with fields, states, and relationships"
+---
+
+## Overview
+
+The `Patient` entity is the central entity in the Patient Manager application, representing an individual receiving psychological services. It stores comprehensive personal information, contact details, and treatment status.
+
+**Source:** `src/main/java/com/bo/patientmanager/model/Patient.java`
+
+## Entity Definition
+
+```java
+@Entity
+public class Patient {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long patientId;
+    
+    // Personal information
+    private String name;
+    private String lastName;
+    private Date birthday;
+    private String gender;
+    private String avatar;
+    
+    // Contact information
+    private String address;
+    private String city;
+    private String country;
+    private String phone1;
+    private String phone2;
+    private String email;
+    private String social;
+    
+    // Treatment information
+    private String derivedFrom;
+    private String derivedTo;
+    @Column(length = 4000)
+    private String observations;
+    
+    // Status
+    private boolean isCurrentPatient;
+    private State state;
+}
+```
+
+## Fields
+
+### Identity
+
+<ParamField path="patientId" type="Long" required>
+  Primary key, auto-generated database identifier
+</ParamField>
+
+### Personal Information
+
+<ParamField path="name" type="String">
+  Patient's first name
+</ParamField>
+
+<ParamField path="lastName" type="String">
+  Patient's last name or surname
+</ParamField>
+
+<ParamField path="birthday" type="Date">
+  Patient's date of birth, used for age calculation
+</ParamField>
+
+<ParamField path="gender" type="String">
+  Patient's gender identity
+</ParamField>
+
+<ParamField path="avatar" type="String">
+  Path or URL to patient's profile image
+</ParamField>
+
+### Contact Information
+
+<ParamField path="address" type="String">
+  Patient's street address
+</ParamField>
+
+<ParamField path="city" type="String">
+  Patient's city of residence
+</ParamField>
+
+<ParamField path="country" type="String">
+  Patient's country of residence
+</ParamField>
+
+<ParamField path="phone1" type="String">
+  Primary contact phone number
+</ParamField>
+
+<ParamField path="phone2" type="String">
+  Secondary contact phone number (optional)
+</ParamField>
+
+<ParamField path="email" type="String">
+  Patient's email address
+</ParamField>
+
+<ParamField path="social" type="String">
+  Social security number or similar identifier
+</ParamField>
+
+### Treatment Information
+
+<ParamField path="derivedFrom" type="String">
+  Name or organization that referred this patient to the practice
+</ParamField>
+
+<ParamField path="derivedTo" type="String">
+  Name or organization to which the patient was referred (if applicable)
+</ParamField>
+
+<ParamField path="observations" type="String">
+  Large text field (4000 characters) for initial observations and general notes about the patient
+  
+  **Database:** `@Column(length = 4000)`
+</ParamField>
+
+### Status Fields
+
+<ParamField path="isCurrentPatient" type="boolean" default="true">
+  Indicates whether the patient is currently receiving treatment
+  
+  Set to `true` by default when a patient is created
+</ParamField>
+
+<ParamField path="state" type="State" default="ACTIVO">
+  Current treatment state of the patient. See [Patient States](#patient-states) for possible values.
+</ParamField>
+
+## Patient States
+
+The `State` enum defines four possible treatment states:
+
+<AccordionGroup>
+  <Accordion title="ACTIVO - Active Treatment">
+    Patient is currently receiving active treatment and attending sessions.
+    
+    **Display Value:** "Activo"
+    
+    This is the default state for new patients.
+  </Accordion>
+
+  <Accordion title="ALTA - Discharged">
+    Patient has successfully completed treatment and been discharged.
+    
+    **Display Value:** "Alta"
+    
+    Used when treatment goals have been achieved.
+  </Accordion>
+
+  <Accordion title="ABANDONO - Abandoned">
+    Patient has discontinued treatment without proper discharge.
+    
+    **Display Value:** "Abandono"
+    
+    Used when patient stops attending sessions without completion.
+  </Accordion>
+
+  <Accordion title="DERIVACION - Referred Out">
+    Patient has been referred to another provider or specialist.
+    
+    **Display Value:** "Derivación"
+    
+    Used when patient needs services outside the practice's scope.
+  </Accordion>
+</AccordionGroup>
+
+### State Enum Definition
+
+```java
+enum State {
+    ACTIVO,      // Active
+    ALTA,        // Discharged
+    ABANDONO,    // Abandoned
+    DERIVACION   // Referred
+}
+```
+
+### State Display Logic
+
+The `getState()` method converts enum values to display strings:
+
+```java
+public String getState() {
+    return switch (this.state) {
+        case ACTIVO    -> "Activo";
+        case ALTA      -> "Alta";
+        case ABANDONO  -> "Abandono";
+        case DERIVACION -> "Derivación";
+        default -> null;
+    };
+}
+```
+
+## Default Values
+
+When creating a new Patient instance, the constructor sets default values:
+
+```java
+public Patient() {
+    this.isCurrentPatient = true;
+    this.state = State.ACTIVO;
+}
+```
+
+This ensures that:
+- New patients are automatically marked as current
+- New patients start in the "ACTIVO" (active) state
+
+## Relationships
+
+### Sessions
+
+Patients can have multiple scheduled therapy sessions:
+
+```java
+// In Session.java
+@ManyToOne
+@JoinColumn(name = "patient_id", nullable = false)
+private Patient patient;
+```
+
+Each session includes:
+- Day of the week
+- Start and end times
+- Session mode (in-person, virtual, etc.)
+- Billing information
+
+See [Session Entity](/model/session) for details.
+
+### Relatives
+
+Patients can have multiple associated family members and contacts:
+
+```java
+// In Relative.java
+@ManyToOne
+@JoinColumn(name = "patient_id", nullable = false)
+private Patient patient;
+```
+
+See [Relative Entity](/model/relative) for details.
+
+### Patient-Relative Relations
+
+The many-to-many relationship between patients and relatives is managed through `PatientRelativeRelation`, which tracks:
+- Specific relationship type
+- Whether relative is main contact
+- Observations about the relationship
+
+## Usage Examples
+
+### Creating a New Patient
+
+```java
+Patient patient = new Patient(
+    "Juan",                    // name
+    "Pérez",                   // lastName
+    new Date(),                // birthday
+    "Male",                    // gender
+    "/avatars/default.png",   // avatar
+    "Calle Principal 123",     // address
+    "Buenos Aires",            // city
+    "Argentina",               // country
+    "+54 11 1234-5678",        // phone1
+    "+54 11 8765-4321",        // phone2
+    "juan@example.com",        // email
+    "20-12345678-9",          // social
+    "Dr. García",             // derivedFrom
+    "Initial consultation notes" // initialObservations
+);
+```
+
+### Updating Patient State
+
+```java
+// Discharge a patient
+patient.setState(State.ALTA);
+
+// Mark patient as referred out
+patient.setState(State.DERIVACION);
+patient.setDerivedTo("Dr. Specialist Name");
+
+// Mark as abandoned
+patient.setState(State.ABANDONO);
+patient.setIsCurrentPatient(false);
+```
+
+### Querying Current Patients
+
+```java
+// Find all active patients
+List<Patient> activePatients = patientRepository.findByIsCurrentPatientTrue();
+
+// Find patients by state
+List<Patient> discharged = patientRepository.findByState(State.ALTA);
+```
+
+## Data Validation
+
+<Warning>
+  The Patient entity does not include built-in validation annotations. Implement validation in the service layer or DTOs:
+  - Validate email format
+  - Ensure required fields (name, lastName) are not empty
+  - Validate date ranges for birthday
+  - Validate phone number formats
+</Warning>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Soft Delete" icon="trash-undo">
+    Use state changes instead of deleting patient records to maintain historical data
+  </Card>
+  <Card title="Current Patient Flag" icon="flag">
+    Update `isCurrentPatient` when changing state to ALTA, ABANDONO, or DERIVACION
+  </Card>
+  <Card title="Referral Tracking" icon="arrow-right-arrow-left">
+    Always populate `derivedTo` when setting state to DERIVACION
+  </Card>
+  <Card title="Observation Limits" icon="text-size">
+    Keep observations field under 4000 characters; use Clinical History for detailed session notes
+  </Card>
+</CardGroup>
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Clinical History" icon="file-medical" href="/model/clinical-history">
+    Learn how to document therapy sessions
+  </Card>
+  <Card title="Sessions" icon="calendar" href="/model/session">
+    Schedule recurring appointments
+  </Card>
+  <Card title="Relatives" icon="users" href="/model/relative">
+    Manage patient contacts
+  </Card>
+  <Card title="Data Model Overview" icon="diagram-project" href="/model/overview">
+    View complete entity relationship diagram
+  </Card>
+</CardGroup>

@@ -1,0 +1,730 @@
+---
+title: GUI Components
+description: Custom Swing components, theme system, and UI architecture
+---
+
+## Overview
+
+Patient Manager uses Java Swing with modern enhancements:
+
+- **FlatLaf** - Modern Look and Feel library
+- **Custom Components** - Reusable UI components
+- **Theme System** - Dynamic theme switching
+- **Background Images** - Styled panels with backgrounds
+- **NetBeans GUI Builder** - Visual form designer
+
+## Theme System
+
+### Architecture
+
+The theme system consists of:
+
+1. **AppTheme** - Enum defining available themes
+2. **ThemeManager** - Singleton managing current theme
+3. **Theme Listeners** - Observer pattern for theme changes
+4. **BackgroundPanel** - Components that respond to theme changes
+
+### AppTheme Enum
+
+Defines theme properties (`AppTheme.java:14-91`):
+
+```java
+public enum AppTheme {
+    NODES(
+        false,                              // dark mode?
+        "/public/bg/bg_nodes.jpg",         // background image
+        "/public/bg/bg_nodes_menu.jpg",    // menu background
+        new Color(52, 152, 219),            // primary color
+        new Color(236, 240, 241),           // secondary color
+        new Color(127, 140, 141),           // tertiary color
+        new Font("Segoe UI", Font.PLAIN, 13) // font
+    ),
+    
+    DARK(
+        true,
+        "/public/bg/bg_nodes.jpg",
+        "/public/bg/bg_nodes_menu.jpg",
+        new Color(46, 204, 113),
+        new Color(44, 62, 80),
+        new Color(149, 165, 166),
+        new Font("Segoe UI", Font.PLAIN, 13)
+    ),
+    
+    STARS(
+        false,
+        "/public/bg/bg_stars.jpg",
+        "/public/bg/bg_stars_menu.jpg",
+        new Color(0, 168, 150),
+        new Color(240, 248, 255),
+        new Color(100, 100, 100),
+        new Font("Segoe UI", Font.BOLD, 13)
+    ),
+    
+    NIGHT(
+        true,
+        "/public/bg/bg_nodes.jpg",
+        "/public/bg/bg_nodes_menu.jpg",
+        new Color(155, 89, 182),
+        new Color(30, 30, 30),
+        new Color(180, 180, 180),
+        new Font("Consolas", Font.PLAIN, 13)
+    ),
+    
+    CLASSIC(
+        false,
+        "/public/bg/bg_nodes.jpg",
+        "/public/bg/bg_nodes_menu.jpg",
+        new Color(52, 73, 94),
+        new Color(250, 250, 250),
+        new Color(120, 120, 120),
+        new Font("Tahoma", Font.PLAIN, 13)
+    );
+    
+    public final boolean dark;
+    public final String background;
+    public final String menuBg;
+    public final Color primary;
+    public final Color secondary;
+    public final Color tertiary;
+    public final Font font;
+}
+```
+
+### ThemeManager
+
+Global theme controller with observer pattern (`ThemeManager.java:17-93`):
+
+```java
+public final class ThemeManager {
+    private static AppTheme current = AppTheme.CLASSIC;
+    private static final List<Runnable> listeners = new ArrayList<>();
+
+    private ThemeManager() {} // Singleton
+
+    // Register theme change listeners
+    public static void addThemeListener(Runnable r) {
+        listeners.add(r);
+    }
+
+    public static AppTheme getTheme() {
+        return current;
+    }
+
+    public static void setTheme(AppTheme theme) {
+        if(theme == current) return;
+        
+        current = theme;
+        
+        // Apply FlatLaf theme
+        applyLookAndFeel(theme);
+        
+        // Notify all registered listeners
+        for(Runnable r : listeners) {
+            r.run();
+        }
+        
+        // Refresh all windows
+        refreshAllWindows();
+    }
+
+    private static void applyLookAndFeel(AppTheme theme) {
+        try {
+            if(theme.dark) {
+                com.formdev.flatlaf.FlatDarkLaf.setup();
+            } else {
+                com.formdev.flatlaf.FlatLightLaf.setup();
+            }
+        } catch(Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private static void refreshAllWindows() {
+        for(Window w : Window.getWindows()) {
+            SwingUtilities.updateComponentTreeUI(w);
+            w.pack();
+        }
+    }
+
+    // Convenience accessors
+    public static Color primary() {
+        return current.primary;
+    }
+
+    public static Color secondary() {
+        return current.secondary;
+    }
+
+    public static Color tertiary() {
+        return current.tertiary;
+    }
+
+    public static Font font() {
+        return current.font;
+    }
+
+    public static String background() {
+        return current.background;
+    }
+    
+    public static String menuBackground() {
+        return current.menuBg;
+    }
+}
+```
+
+### Using Themes in Components
+
+```java
+// Set component colors based on theme
+JButton button = new JButton("Click Me");
+button.setBackground(ThemeManager.primary());
+button.setForeground(ThemeManager.secondary());
+button.setFont(ThemeManager.font());
+
+// Register for theme changes
+ThemeManager.addThemeListener(() -> {
+    button.setBackground(ThemeManager.primary());
+    button.setForeground(ThemeManager.secondary());
+    button.repaint();
+});
+```
+
+### Changing Themes
+
+```java
+// Change to dark theme
+ThemeManager.setTheme(AppTheme.DARK);
+
+// All registered components automatically update
+```
+
+## BackgroundPanel Component
+
+Custom panel that displays themed background images (`BackgroundPanel.java:20-92`):
+
+```java
+public class BackgroundPanel extends JPanel {
+    private Image bg;
+    private boolean useMenuBackground = false;
+
+    public BackgroundPanel() {
+        loadBackground();
+        
+        // Register for theme changes
+        ThemeManager.addThemeListener(() -> {
+            loadBackground();
+            repaint();
+        });
+    }
+    
+    public BackgroundPanel(boolean useMenuBackground) {
+        this.useMenuBackground = useMenuBackground;
+        loadBackground();
+        
+        ThemeManager.addThemeListener(() -> {
+            loadBackground();
+            repaint();
+        });
+    }
+
+    private void loadBackground() {
+        String path = useMenuBackground 
+            ? ThemeManager.menuBackground() 
+            : ThemeManager.background();
+        
+        bg = new ImageIcon(
+            getClass().getResource(path)
+        ).getImage();
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        
+        if(bg != null) {
+            // Draw background scaled to panel size
+            g.drawImage(bg, 0, 0, getWidth(), getHeight(), this);
+        }
+    }
+
+    // Set content view
+    public void setView(JPanel view) {
+        removeAll();
+        setLayout(new BorderLayout());
+        
+        view.setOpaque(false); // Transparent to show background
+        add(view, BorderLayout.CENTER);
+        
+        revalidate();
+        repaint();
+    }
+
+    // Helper method for standard setup
+    public static void setDefaultView(JPanel container, JPanel view) {
+        container.removeAll();
+        container.setLayout(new BorderLayout());
+        
+        BackgroundPanel bg = new BackgroundPanel();
+        bg.setLayout(new BorderLayout());
+        
+        container.add(bg, BorderLayout.CENTER);
+        bg.setView(view);
+    }
+}
+```
+
+### Using BackgroundPanel
+
+```java
+// Create panel with default background
+BackgroundPanel panel = new BackgroundPanel();
+panel.setView(new HomePane());
+
+// Create panel with menu background
+BackgroundPanel menuPanel = new BackgroundPanel(true);
+menuPanel.setLayout(new BorderLayout());
+menuPanel.add(menuComponent, BorderLayout.CENTER);
+
+// Quick helper method
+BackgroundPanel.setDefaultView(container, contentView);
+```
+
+## Main Window Architecture
+
+The `MainWindow` class is the main application frame (`MainWindow.java:22-234`):
+
+### Structure
+
+```
+MainWindow (JFrame)
+└── mainBg (JPanel)
+    ├── menuBg (BackgroundPanel)
+    │   └── Menu buttons
+    └── content (JPanel)
+        └── bgContent (BackgroundPanel)
+            └── Dynamic content views
+```
+
+### Initialization
+
+```java
+public MainWindow() {
+    // 1. Set initial theme
+    ThemeManager.setTheme(AppTheme.CLASSIC);
+    
+    // 2. Initialize components (NetBeans generated)
+    initComponents();
+    
+    // 3. Setup content background
+    content.removeAll();
+    content.setLayout(new BorderLayout());
+    
+    bgContent = new BackgroundPanel();
+    bgContent.setLayout(new BorderLayout());
+    
+    content.add(bgContent, BorderLayout.CENTER);
+    
+    // 4. Load initial view
+    bgContent.setView(new HomePane());
+    
+    // 5. Setup menu background
+    mainBg.remove(menuBg);
+    menuBg.setOpaque(false);
+    
+    BackgroundPanel menuBackground = new BackgroundPanel(true);
+    menuBackground.setLayout(new BorderLayout());
+    menuBackground.add(menuBg, BorderLayout.CENTER);
+    
+    mainBg.add(
+        menuBackground,
+        new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1280, 100)
+    );
+}
+```
+
+### Navigation Between Views
+
+```java
+// Load patient form
+private void btnLoadNewPatientActionPerformed(ActionEvent evt) {
+    LoadPatientForm loadPatientFormPane = new LoadPatientForm(serviceManager);
+    bgContent.setView(loadPatientFormPane);
+}
+
+// View all patients
+private void btnGetAllPatientsActionPerformed(ActionEvent evt) {
+    bgContent.setView(new SeeAllPatientsPane(serviceManager, bgContent));
+}
+
+// Theme picker
+private void btnLoadNewClinicHistoryActionPerformed(ActionEvent evt) {
+    bgContent.setView(new ThemePickerPane());
+}
+```
+
+## Custom Components
+
+### CustomMessageDialog
+
+Standardized message dialogs with theme support:
+
+```java
+public class CustomMessageDialog {
+    public static void showInfo(Component parent, String message) {
+        JOptionPane.showMessageDialog(
+            parent,
+            message,
+            "Information",
+            JOptionPane.INFORMATION_MESSAGE
+        );
+    }
+    
+    public static void showError(Component parent, String message) {
+        JOptionPane.showMessageDialog(
+            parent,
+            message,
+            "Error",
+            JOptionPane.ERROR_MESSAGE
+        );
+    }
+    
+    public static boolean showConfirm(Component parent, String message) {
+        int result = JOptionPane.showConfirmDialog(
+            parent,
+            message,
+            "Confirm",
+            JOptionPane.YES_NO_OPTION
+        );
+        return result == JOptionPane.YES_OPTION;
+    }
+}
+```
+
+### Usage
+
+```java
+// Show info
+CustomMessageDialog.showInfo(this, "Patient saved successfully!");
+
+// Show error
+CustomMessageDialog.showError(this, "Failed to save patient.");
+
+// Confirm action
+if (CustomMessageDialog.showConfirm(this, "Delete this patient?")) {
+    // User confirmed
+    deletePatient();
+}
+```
+
+## NetBeans GUI Builder
+
+### Generated Code
+
+NetBeans generates Swing code between special comments:
+
+```java
+// <editor-fold defaultstate="collapsed" desc="Generated Code">
+private void initComponents() {
+    mainBg = new javax.swing.JPanel();
+    menuBg = new javax.swing.JPanel();
+    btnSearchPatient = new javax.swing.JButton();
+    
+    // ... component initialization
+    
+    btnSearchPatient.setText("Search Patient");
+    btnSearchPatient.addActionListener(new java.awt.event.ActionListener() {
+        public void actionPerformed(java.awt.event.ActionEvent evt) {
+            btnSearchPatientActionPerformed(evt);
+        }
+    });
+    
+    // ... layout configuration
+}
+// </editor-fold>
+```
+
+<Warning>
+**Do not edit code between `<editor-fold>` and `</editor-fold>` comments!**
+
+This code is managed by NetBeans GUI Builder and will be overwritten.
+Make customizations in the constructor or event handlers.
+</Warning>
+
+### Event Handlers
+
+Event handlers are created outside the generated code:
+
+```java
+private void btnSearchPatientActionPerformed(java.awt.event.ActionEvent evt) {
+    // Your custom code here
+    String searchTerm = searchField.getText();
+    searchPatients(searchTerm);
+}
+```
+
+## Layout Managers
+
+### BorderLayout
+
+Used for main container layouts:
+
+```java
+JPanel panel = new JPanel(new BorderLayout());
+panel.add(topComponent, BorderLayout.NORTH);
+panel.add(centerComponent, BorderLayout.CENTER);
+panel.add(bottomComponent, BorderLayout.SOUTH);
+```
+
+### AbsoluteLayout
+
+Used by NetBeans GUI Builder for precise positioning:
+
+```java
+panel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+panel.add(
+    component,
+    new org.netbeans.lib.awtextra.AbsoluteConstraints(x, y, width, height)
+);
+```
+
+### GridBagLayout
+
+For complex responsive forms:
+
+```java
+JPanel panel = new JPanel(new GridBagLayout());
+GridBagConstraints gbc = new GridBagConstraints();
+
+gbc.gridx = 0;
+gbc.gridy = 0;
+gbc.anchor = GridBagConstraints.WEST;
+panel.add(new JLabel("Name:"), gbc);
+
+gbc.gridx = 1;
+gbc.fill = GridBagConstraints.HORIZONTAL;
+gbc.weightx = 1.0;
+panel.add(nameField, gbc);
+```
+
+## Best Practices
+
+### 1. Make Content Transparent
+
+When using BackgroundPanel, make content transparent to show background:
+
+```java
+JPanel contentPanel = new JPanel();
+contentPanel.setOpaque(false); // Transparent
+
+BackgroundPanel bg = new BackgroundPanel();
+bg.setView(contentPanel);
+```
+
+### 2. Register Theme Listeners
+
+Components that use theme colors should register listeners:
+
+```java
+public class CustomButton extends JButton {
+    public CustomButton(String text) {
+        super(text);
+        updateTheme();
+        
+        ThemeManager.addThemeListener(() -> {
+            updateTheme();
+            repaint();
+        });
+    }
+    
+    private void updateTheme() {
+        setBackground(ThemeManager.primary());
+        setForeground(ThemeManager.secondary());
+        setFont(ThemeManager.font());
+    }
+}
+```
+
+### 3. Use ServiceManager for Data Access
+
+Pass ServiceManager to views that need data:
+
+```java
+public class PatientListView extends JPanel {
+    private ServiceManager serviceManager;
+    
+    public PatientListView(ServiceManager serviceManager) {
+        this.serviceManager = serviceManager;
+        loadPatients();
+    }
+    
+    private void loadPatients() {
+        List<Patient> patients = serviceManager
+            .getPatientService()
+            .findAll();
+        displayPatients(patients);
+    }
+}
+```
+
+### 4. Handle Exceptions in UI
+
+```java
+private void savePatient() {
+    try {
+        Patient patient = createPatientFromForm();
+        serviceManager.getPatientService().create(patient);
+        CustomMessageDialog.showInfo(this, "Patient saved!");
+    } catch (Exception e) {
+        e.printStackTrace();
+        CustomMessageDialog.showError(this, 
+            "Error saving patient: " + e.getMessage());
+    }
+}
+```
+
+### 5. Update UI on Event Dispatch Thread
+
+```java
+// Load data in background
+new Thread(() -> {
+    List<Patient> patients = serviceManager
+        .getPatientService()
+        .findAll();
+    
+    // Update UI on EDT
+    SwingUtilities.invokeLater(() -> {
+        displayPatients(patients);
+    });
+}).start();
+```
+
+## Creating Custom Components
+
+### Example: Themed Label
+
+```java
+public class ThemedLabel extends JLabel {
+    private boolean usePrimaryColor;
+    
+    public ThemedLabel(String text, boolean usePrimaryColor) {
+        super(text);
+        this.usePrimaryColor = usePrimaryColor;
+        updateTheme();
+        
+        ThemeManager.addThemeListener(() -> {
+            updateTheme();
+            repaint();
+        });
+    }
+    
+    private void updateTheme() {
+        setForeground(usePrimaryColor 
+            ? ThemeManager.primary() 
+            : ThemeManager.secondary());
+        setFont(ThemeManager.font());
+    }
+}
+```
+
+### Example: Themed Panel
+
+```java
+public class ThemedPanel extends JPanel {
+    public ThemedPanel() {
+        updateTheme();
+        
+        ThemeManager.addThemeListener(() -> {
+            updateTheme();
+            repaint();
+        });
+    }
+    
+    private void updateTheme() {
+        setBackground(ThemeManager.secondary());
+        setBorder(BorderFactory.createLineBorder(
+            ThemeManager.primary(), 2));
+    }
+}
+```
+
+## FlatLaf Integration
+
+### Setup
+
+FlatLaf is initialized in `ThemeManager`:
+
+```java
+if(theme.dark) {
+    com.formdev.flatlaf.FlatDarkLaf.setup();
+} else {
+    com.formdev.flatlaf.FlatLightLaf.setup();
+}
+```
+
+### Benefits
+
+- Modern, flat design
+- High DPI support
+- Consistent cross-platform appearance
+- Light and dark themes
+- Better text rendering
+
+### Customization
+
+Customize FlatLaf properties:
+
+```java
+// Set global properties
+UIManager.put("Button.arc", 10); // Rounded corners
+UIManager.put("Component.focusWidth", 2);
+UIManager.put("Button.default.background", ThemeManager.primary());
+
+// Apply theme
+FlatLightLaf.setup();
+```
+
+## Resources Location
+
+Resources must be in `src/main/resources/`:
+
+```
+src/main/resources/
+├── public/
+│   ├── bg/
+│   │   ├── bg_nodes.jpg
+│   │   ├── bg_nodes_menu.jpg
+│   │   ├── bg_stars.jpg
+│   │   └── bg_stars_menu.jpg
+│   └── icons/
+│       ├── add.png
+│       ├── search.png
+│       ├── user.png
+│       └── ...
+└── data/
+    └── patient.db
+```
+
+### Loading Resources
+
+```java
+// Load image
+ImageIcon icon = new ImageIcon(
+    getClass().getResource("/public/icons/add.png")
+);
+
+// Load as stream
+InputStream is = getClass().getResourceAsStream("/data/patient.db");
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Customization" icon="palette" href="/dev/customization">
+    Learn how to customize and extend the application
+  </Card>
+  
+  <Card title="Architecture" icon="diagram-project" href="/dev/architecture">
+    Review the application architecture
+  </Card>
+</CardGroup>

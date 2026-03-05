@@ -1,0 +1,488 @@
+---
+title: Theme Customization
+description: How to customize the application appearance with different themes
+icon: palette
+---
+
+The Patient Manager application includes a theme system that allows you to customize the appearance of the user interface. This guide explains how themes work and how to apply them.
+
+## Overview
+
+The theme system provides:
+
+- Multiple pre-built themes with different color schemes
+- Light and dark mode options
+- Customizable colors and fonts
+- Automatic UI refresh when themes change
+- Persistent theme selection across sessions
+
+<Info>
+  Themes control the overall appearance of the application, including colors, backgrounds, and typography.
+</Info>
+
+## Available Themes
+
+The application includes five built-in themes:
+
+<Tabs>
+  <Tab title="Classic">
+    **Classic Theme** - Traditional, professional appearance
+    
+    - **Mode**: Light
+    - **Primary Color**: Blue-Gray (#52, #73, #94)
+    - **Secondary Color**: Light Gray (#250, #250, #250)
+    - **Font**: Tahoma, Plain, 13pt
+    - **Best For**: Professional, traditional office settings
+  </Tab>
+  
+  <Tab title="Nodes">
+    **Nodes Theme** - Modern, bright interface
+    
+    - **Mode**: Light
+    - **Primary Color**: Sky Blue (#52, #152, #219)
+    - **Secondary Color**: Light Silver (#236, #240, #241)
+    - **Font**: Segoe UI, Plain, 13pt
+    - **Background**: Nodes pattern
+    - **Best For**: Modern, clean workspace
+  </Tab>
+  
+  <Tab title="Stars">
+    **Stars Theme** - Elegant, distinctive look
+    
+    - **Mode**: Light
+    - **Primary Color**: Teal (#0, #168, #150)
+    - **Secondary Color**: Alice Blue (#240, #248, #255)
+    - **Font**: Segoe UI, Bold, 13pt
+    - **Background**: Stars pattern
+    - **Best For**: Unique, professional appearance
+  </Tab>
+  
+  <Tab title="Dark">
+    **Dark Theme** - Reduced eye strain for low-light
+    
+    - **Mode**: Dark
+    - **Primary Color**: Emerald (#46, #204, #113)
+    - **Secondary Color**: Dark Gray (#44, #62, #80)
+    - **Font**: Segoe UI, Plain, 13pt
+    - **Best For**: Low-light environments, reduced eye strain
+  </Tab>
+  
+  <Tab title="Night">
+    **Night Theme** - Deep dark with purple accents
+    
+    - **Mode**: Dark
+    - **Primary Color**: Purple (#155, #89, #182)
+    - **Secondary Color**: Near Black (#30, #30, #30)
+    - **Font**: Consolas, Plain, 13pt
+    - **Best For**: Late-night work, minimal eye strain
+  </Tab>
+</Tabs>
+
+## Theme Structure
+
+Themes are defined using the `AppTheme` enum:
+
+<CodeGroup>
+```java Theme Definition
+// From AppTheme.java:14-64
+public enum AppTheme {
+    CLASSIC(
+        false,                           // Light mode
+        "/public/bg/bg_nodes.jpg",       // Background image
+        "/public/bg/bg_nodes_menu.jpg",  // Menu background
+        new Color(52, 73, 94),           // Primary color
+        new Color(250, 250, 250),        // Secondary color
+        new Color(120, 120, 120),        // Tertiary color
+        new Font("Tahoma", Font.PLAIN, 13) // Font
+    );
+    
+    public final boolean dark;
+    public final String background;
+    public final String menuBg;
+    public final Color primary;
+    public final Color secondary;
+    public final Color tertiary;
+    public final Font font;
+}
+```
+
+```java Theme Manager
+// From ThemeManager.java:17-46
+public final class ThemeManager {
+    private static AppTheme current = AppTheme.CLASSIC;
+    
+    public static void setTheme(AppTheme theme) {
+        if(theme == current) return;
+        
+        current = theme;
+        applyLookAndFeel(theme);
+        
+        // Notify listeners
+        for(Runnable r : listeners) {
+            r.run();
+        }
+        
+        refreshAllWindows();
+    }
+}
+```
+</CodeGroup>
+
+## Applying Themes
+
+To change the application theme:
+
+<Steps>
+  <Step title="Access Theme Picker">
+    Click **"Cargar Sesión"** (Load Session) in the main menu.
+    
+    <Note>
+      Currently, the theme picker is accessed through this button. In future versions, it may have a dedicated menu item.
+    </Note>
+  </Step>
+
+  <Step title="Select Theme">
+    The Theme Picker pane (`ThemePickerPane`) displays available themes.
+    
+    Choose from:
+    - Classic
+    - Nodes
+    - Stars
+    - Dark
+    - Night
+  </Step>
+
+  <Step title="Apply Theme">
+    Click on your chosen theme to apply it.
+    
+    The theme change happens immediately:
+    1. Look and Feel is updated (Light or Dark)
+    2. Colors are refreshed throughout the UI
+    3. Background images are changed
+    4. All open windows are updated
+  </Step>
+</Steps>
+
+## Theme Components
+
+Each theme controls several visual aspects:
+
+<Accordion title="Colors">
+  **Primary Color**:
+  - Main UI elements
+  - Buttons and controls
+  - Accent highlights
+  
+  **Secondary Color**:
+  - Backgrounds
+  - Panels
+  - Secondary UI elements
+  
+  **Tertiary Color**:
+  - Borders
+  - Dividers
+  - Subtle details
+  
+  Access colors via:
+  ```java
+  ThemeManager.primary()
+  ThemeManager.secondary()
+  ThemeManager.tertiary()
+  ```
+</Accordion>
+
+<Accordion title="Typography">
+  Each theme includes a default font:
+  
+  **Classic**: Tahoma, Plain, 13pt
+  **Nodes/Stars/Dark**: Segoe UI, various weights, 13pt
+  **Night**: Consolas, Plain, 13pt
+  
+  Access font via:
+  ```java
+  ThemeManager.font()
+  ```
+</Accordion>
+
+<Accordion title="Backgrounds">
+  Themes can include custom background images:
+  
+  - **Main Background**: Applied to content areas
+  - **Menu Background**: Applied to menu bar
+  
+  Access backgrounds via:
+  ```java
+  ThemeManager.background()
+  ThemeManager.menuBackground()
+  ```
+</Accordion>
+
+<Accordion title="Look and Feel">
+  Themes are built on FlatLaf (Flat Look and Feel):
+  
+  - **Light Themes**: Use FlatLightLaf
+  - **Dark Themes**: Use FlatDarkLaf
+  
+  This provides modern, flat UI controls that are consistent across operating systems.
+</Accordion>
+
+## Dark Mode vs Light Mode
+
+<Tabs>
+  <Tab title="Light Mode">
+    **Characteristics**:
+    - Bright backgrounds
+    - Dark text for readability
+    - Higher contrast
+    - Traditional appearance
+    
+    **Themes**:
+    - Classic
+    - Nodes
+    - Stars
+    
+    **Best For**:
+    - Well-lit environments
+    - Daytime use
+    - Users who prefer traditional interfaces
+  </Tab>
+  
+  <Tab title="Dark Mode">
+    **Characteristics**:
+    - Dark backgrounds
+    - Light text
+    - Reduced brightness
+    - Modern, sleek appearance
+    
+    **Themes**:
+    - Dark
+    - Night
+    
+    **Best For**:
+    - Low-light environments
+    - Evening/night work
+    - Reduced eye strain
+    - OLED screen power saving
+  </Tab>
+</Tabs>
+
+## Theme Persistence
+
+The currently selected theme is set at application startup:
+
+```java
+// From MainWindow.java:35
+ThemeManager.setTheme(AppTheme.CLASSIC);
+```
+
+<Note>
+  Currently, the theme selection is not persisted between sessions. The application always starts with the CLASSIC theme. Future versions may include theme persistence.
+</Note>
+
+## Theme Listeners
+
+Components can react to theme changes by registering listeners:
+
+```java
+// Add a listener to respond to theme changes
+ThemeManager.addThemeListener(() -> {
+    // Update component colors
+    // Refresh UI
+    // Reload resources
+});
+```
+
+When a theme is changed:
+1. All registered listeners are notified
+2. Windows are automatically refreshed
+3. UI components update to new colors
+
+## Customizing Themes
+
+For developers who want to create custom themes:
+
+<Steps>
+  <Step title="Define Theme in AppTheme">
+    Add a new enum value with your theme configuration:
+    
+    ```java
+    MY_THEME(
+        false,  // or true for dark mode
+        "/path/to/background.jpg",
+        "/path/to/menu_bg.jpg",
+        new Color(R, G, B),  // Primary
+        new Color(R, G, B),  // Secondary
+        new Color(R, G, B),  // Tertiary
+        new Font("FontName", Font.STYLE, size)
+    )
+    ```
+  </Step>
+
+  <Step title="Add Background Images">
+    Place your background images in the resources folder:
+    
+    ```
+    src/main/resources/public/bg/
+    ```
+  </Step>
+
+  <Step title="Update Theme Picker">
+    Add your theme to the ThemePickerPane UI to make it selectable.
+  </Step>
+
+  <Step title="Test Theme">
+    Apply your theme and verify:
+    - Colors are appropriate
+    - Text is readable
+    - Backgrounds load correctly
+    - All UI elements look good
+  </Step>
+</Steps>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Choose Appropriate Theme for Environment">
+    Match your theme to your workspace:
+    
+    **Bright Office**: Light themes (Classic, Nodes, Stars)
+    **Dim Office**: Dark themes with moderate contrast
+    **Night Work**: Deep dark themes (Night)
+    
+    Adjust as lighting conditions change throughout the day.
+  </Accordion>
+  
+  <Accordion title="Consider User Preferences">
+    If multiple people use the same computer:
+    
+    - Make theme changes easy
+    - Document how to switch themes
+    - Consider setting a default that works for most users
+  </Accordion>
+  
+  <Accordion title="Test Readability">
+    When choosing or customizing themes:
+    
+    - Ensure text is readable
+    - Check contrast ratios
+    - Verify all UI elements are visible
+    - Test with different screen types
+  </Accordion>
+  
+  <Accordion title="Accessibility Considerations">
+    Remember that themes affect accessibility:
+    
+    - High contrast helps users with vision impairments
+    - Some color combinations are problematic for colorblind users
+    - Font size and style affect readability
+    - Dark modes can help light-sensitive users
+  </Accordion>
+</AccordionGroup>
+
+## Theme Color Reference
+
+<CardGroup cols={2}>
+  <Card title="Classic" icon="briefcase">
+    **Primary**: RGB(52, 73, 94) - Blue-Gray
+    **Secondary**: RGB(250, 250, 250) - Light Gray
+    **Tertiary**: RGB(120, 120, 120) - Medium Gray
+  </Card>
+  
+  <Card title="Nodes" icon="circle-nodes">
+    **Primary**: RGB(52, 152, 219) - Sky Blue
+    **Secondary**: RGB(236, 240, 241) - Light Silver
+    **Tertiary**: RGB(127, 140, 141) - Gray
+  </Card>
+  
+  <Card title="Stars" icon="star">
+    **Primary**: RGB(0, 168, 150) - Teal
+    **Secondary**: RGB(240, 248, 255) - Alice Blue
+    **Tertiary**: RGB(100, 100, 100) - Gray
+  </Card>
+  
+  <Card title="Dark" icon="moon">
+    **Primary**: RGB(46, 204, 113) - Emerald
+    **Secondary**: RGB(44, 62, 80) - Dark Gray
+    **Tertiary**: RGB(149, 165, 166) - Light Gray
+  </Card>
+  
+  <Card title="Night" icon="moon">
+    **Primary**: RGB(155, 89, 182) - Purple
+    **Secondary**: RGB(30, 30, 30) - Near Black
+    **Tertiary**: RGB(180, 180, 180) - Light Gray
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Theme not applying">
+    **Check**:
+    - Theme picker is accessible
+    - No errors in console
+    - Look and Feel loaded correctly
+    
+    **Solution**: Restart application and try again.
+  </Accordion>
+  
+  <Accordion title="Background images not loading">
+    **Check**:
+    - Image files exist in resources folder
+    - Paths are correct in AppTheme definition
+    - Images are valid format (JPG/PNG)
+    
+    **Solution**: Verify resource paths and file existence.
+  </Accordion>
+  
+  <Accordion title="Text not readable">
+    **Check**:
+    - Color contrast is sufficient
+    - Font size is appropriate
+    - Monitor brightness settings
+    
+    **Solution**: Try a different theme or adjust monitor settings.
+  </Accordion>
+  
+  <Accordion title="Theme resets on restart">
+    **Explanation**: Theme selection is currently not persisted.
+    
+    **Workaround**: Change the default theme in MainWindow.java line 35 to your preferred theme:
+    ```java
+    ThemeManager.setTheme(AppTheme.DARK);  // or your preference
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Future Enhancements
+
+Potential improvements to the theme system:
+
+<CardGroup cols={2}>
+  <Card title="Theme Persistence" icon="floppy-disk">
+    Save theme selection between sessions so users don't need to reapply their preferred theme each time.
+  </Card>
+  
+  <Card title="Custom Theme Creator" icon="wand-magic-sparkles">
+    UI for creating custom themes without code changes, allowing users to define their own colors and fonts.
+  </Card>
+  
+  <Card title="Automatic Theme Switching" icon="clock">
+    Automatically switch between light and dark themes based on time of day.
+  </Card>
+  
+  <Card title="Accessibility Profiles" icon="universal-access">
+    Pre-configured themes optimized for various accessibility needs (high contrast, large text, etc.).
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Patient Management" icon="user" href="/guide/patient-management">
+    Learn how to manage patient records in your customized interface
+  </Card>
+  
+  <Card title="Architecture Overview" icon="diagram-project" href="/dev/architecture">
+    Understand how themes integrate with the application architecture
+  </Card>
+</CardGroup>

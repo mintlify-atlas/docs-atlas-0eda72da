@@ -1,0 +1,446 @@
+---
+title: "Session Entity"
+description: "Documentation for the Session entity managing recurring therapy appointments"
+---
+
+## Overview
+
+The `Session` entity represents a scheduled recurring therapy appointment for a patient. It stores information about when sessions occur (day and time), how they're conducted (mode), and billing details.
+
+**Source:** `src/main/java/com/bo/patientmanager/model/Session.java`
+
+<Note>
+  Sessions represent scheduled recurring appointments, not individual session records. For documentation of specific therapy sessions, see [Clinical History](/model/clinical-history).
+</Note>
+
+## Entity Definition
+
+```java
+@Entity
+@Table(name = "patient_session")
+public class Session {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @ManyToOne
+    @JoinColumn(name = "patient_id", nullable = false)
+    private Patient patient;
+    
+    private DayOfWeek dayOfWeek;
+    
+    @Column(name = "start_time")
+    private LocalTime from;
+    
+    @Column(name = "end_time")
+    private LocalTime to;
+    
+    private String mode;
+    private String difBillingRate;
+    private String currency;
+}
+```
+
+## Fields
+
+### Identity and Relationships
+
+<ParamField path="id" type="Long" required>
+  Primary key, auto-generated database identifier
+</ParamField>
+
+<ParamField path="patient" type="Patient" required>
+  Reference to the patient who has this scheduled session
+  
+  **Relationship:** Many-to-One (required, non-nullable)
+  
+  Each session must be associated with a patient. A patient can have multiple sessions (e.g., twice weekly).
+  
+  ```java
+  @ManyToOne
+  @JoinColumn(name = "patient_id", nullable = false)
+  private Patient patient;
+  ```
+</ParamField>
+
+### Schedule Information
+
+<ParamField path="dayOfWeek" type="DayOfWeek">
+  Day of the week when the session occurs
+  
+  **Type:** Java `DayOfWeek` enum
+  
+  **Values:** MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY
+  
+  **Example:**
+  ```java
+  session.setDayOfWeek(DayOfWeek.MONDAY);
+  ```
+</ParamField>
+
+<ParamField path="from" type="LocalTime">
+  Session start time
+  
+  **Database Column:** `start_time`
+  
+  **Type:** Java `LocalTime` (time without date or timezone)
+  
+  **Example:**
+  ```java
+  session.setFrom(LocalTime.of(14, 0));  // 2:00 PM
+  ```
+</ParamField>
+
+<ParamField path="to" type="LocalTime">
+  Session end time
+  
+  **Database Column:** `end_time`
+  
+  **Type:** Java `LocalTime` (time without date or timezone)
+  
+  **Example:**
+  ```java
+  session.setTo(LocalTime.of(15, 0));  // 3:00 PM
+  ```
+</ParamField>
+
+### Session Configuration
+
+<ParamField path="mode" type="String">
+  How the session is conducted
+  
+  **Common Values:**
+  - `"in-person"` - Face-to-face at the office
+  - `"virtual"` - Online video session
+  - `"phone"` - Telephone session
+  - `"hybrid"` - Combination of in-person and virtual
+</ParamField>
+
+### Billing Information
+
+<ParamField path="difBillingRate" type="String">
+  Differential billing rate for this specific session
+  
+  Allows setting different rates for individual sessions (e.g., reduced rate, sliding scale, insurance contracted rate).
+  
+  **Note:** The field name appears to be abbreviated from "differential billing rate"
+</ParamField>
+
+<ParamField path="currency" type="String">
+  Currency code for billing
+  
+  **Examples:** `"USD"`, `"EUR"`, `"ARS"` (Argentine Peso), `"MXN"` (Mexican Peso)
+  
+  **Standard:** ISO 4217 currency codes recommended
+</ParamField>
+
+## Database Schema
+
+### Table Name
+
+The entity uses a custom table name:
+
+```java
+@Table(name = "patient_session")
+```
+
+This avoids potential conflicts with database reserved words ("session" is reserved in some SQL databases).
+
+### Column Mappings
+
+| Entity Field | Database Column | Type |
+|-------------|-----------------|------|
+| id | id | BIGINT |
+| patient | patient_id | BIGINT (FK) |
+| dayOfWeek | dayOfWeek | VARCHAR/INT |
+| from | start_time | TIME |
+| to | end_time | TIME |
+| mode | mode | VARCHAR |
+| difBillingRate | difBillingRate | VARCHAR |
+| currency | currency | VARCHAR |
+
+## Usage Examples
+
+### Creating a Weekly Session
+
+```java
+// Create a Monday afternoon session
+Session session = new Session(
+    patient,                      // patient
+    DayOfWeek.MONDAY,            // dayOfWeek
+    LocalTime.of(14, 0),         // from (2:00 PM)
+    LocalTime.of(15, 0),         // to (3:00 PM)
+    "in-person",                 // mode
+    "100.00",                    // difBillingRate
+    "USD"                        // currency
+);
+```
+
+### Creating Multiple Sessions per Week
+
+```java
+// Patient attends twice weekly: Monday and Thursday
+Session mondaySession = new Session(
+    patient,
+    DayOfWeek.MONDAY,
+    LocalTime.of(14, 0),
+    LocalTime.of(15, 0),
+    "virtual",
+    "80.00",
+    "USD"
+);
+
+Session thursdaySession = new Session(
+    patient,
+    DayOfWeek.THURSDAY,
+    LocalTime.of(10, 0),
+    LocalTime.of(11, 0),
+    "in-person",
+    "100.00",
+    "USD"
+);
+
+sessionRepository.saveAll(Arrays.asList(mondaySession, thursdaySession));
+```
+
+### Querying Sessions
+
+```java
+// Find all sessions for a specific patient
+List<Session> patientSessions = sessionRepository
+    .findByPatient(patient);
+
+// Find all Monday sessions
+List<Session> mondaySessions = sessionRepository
+    .findByDayOfWeek(DayOfWeek.MONDAY);
+
+// Find sessions in a time range
+List<Session> afternoonSessions = sessionRepository
+    .findByFromBetween(LocalTime.of(12, 0), LocalTime.of(18, 0));
+
+// Find virtual sessions
+List<Session> virtualSessions = sessionRepository
+    .findByMode("virtual");
+```
+
+### Calculating Session Duration
+
+```java
+import java.time.Duration;
+
+public Duration getSessionDuration(Session session) {
+    return Duration.between(session.getFrom(), session.getTo());
+}
+
+// Usage
+Duration duration = getSessionDuration(session);
+long minutes = duration.toMinutes();  // e.g., 60 minutes
+```
+
+### Generating Weekly Schedule
+
+```java
+public Map<DayOfWeek, List<Session>> getWeeklySchedule() {
+    List<Session> allSessions = sessionRepository.findAll();
+    
+    return allSessions.stream()
+        .collect(Collectors.groupingBy(Session::getDayOfWeek));
+}
+```
+
+## Session Types and Modes
+
+<AccordionGroup>
+  <Accordion title="In-Person Sessions">
+    Traditional face-to-face therapy at the office location.
+    
+    ```java
+    session.setMode("in-person");
+    ```
+    
+    **Considerations:**
+    - Requires physical office space
+    - Better for certain therapeutic techniques
+    - Patient must travel to location
+  </Accordion>
+
+  <Accordion title="Virtual Sessions">
+    Online therapy conducted via video conferencing.
+    
+    ```java
+    session.setMode("virtual");
+    ```
+    
+    **Considerations:**
+    - Requires stable internet connection
+    - Increased accessibility for patients
+    - May have different billing rates
+    - Requires HIPAA-compliant platform
+  </Accordion>
+
+  <Accordion title="Phone Sessions">
+    Audio-only therapy sessions.
+    
+    ```java
+    session.setMode("phone");
+    ```
+    
+    **Considerations:**
+    - Most accessible option
+    - May be used for crisis support
+    - Limited non-verbal communication
+  </Accordion>
+
+  <Accordion title="Hybrid Sessions">
+    Combination approach where patient may alternate between in-person and virtual.
+    
+    ```java
+    session.setMode("hybrid");
+    ```
+    
+    **Considerations:**
+    - Flexibility for patient scheduling
+    - May require tracking which sessions are which format
+  </Accordion>
+</AccordionGroup>
+
+## Billing Considerations
+
+### Differential Rates
+
+The `difBillingRate` field allows for session-specific pricing:
+
+<CardGroup cols={2}>
+  <Card title="Standard Rate" icon="dollar-sign">
+    Regular hourly or session rate
+  </Card>
+  <Card title="Sliding Scale" icon="chart-line-down">
+    Reduced rate based on patient income
+  </Card>
+  <Card title="Insurance Rate" icon="file-invoice">
+    Contracted rate with insurance provider
+  </Card>
+  <Card title="Group Rate" icon="users">
+    Different rate for group therapy sessions
+  </Card>
+</CardGroup>
+
+### Multi-Currency Support
+
+```java
+// US patient
+sessionUS.setCurrency("USD");
+sessionUS.setDifBillingRate("150.00");
+
+// Argentine patient
+sessionAR.setCurrency("ARS");
+sessionAR.setDifBillingRate("15000.00");
+
+// European patient
+sessionEU.setCurrency("EUR");
+sessionEU.setDifBillingRate("120.00");
+```
+
+## Relationship with Clinical History
+
+<Info>
+  **Important Distinction:**
+  
+  - **Session** = Recurring appointment schedule ("I see this patient every Monday at 2 PM")
+  - **Clinical History** = Record of what happened in a specific session ("On March 15, 2024, we discussed...")
+  
+  A single `Session` entity represents the recurring schedule, while multiple `ClinicalHistory` records document each individual appointment.
+</Info>
+
+## Data Validation
+
+<Warning>
+  Implement these validations in your service layer:
+  
+  - `from` time must be before `to` time
+  - Session duration should be reasonable (e.g., 30-180 minutes)
+  - `dayOfWeek` must be a valid DayOfWeek value
+  - `patient` must reference an existing patient
+  - Currency code should follow ISO 4217 standard
+  - Billing rate should be a valid decimal number
+</Warning>
+
+### Example Validation
+
+```java
+public void validateSession(Session session) {
+    if (session.getFrom().isAfter(session.getTo())) {
+        throw new ValidationException("Start time must be before end time");
+    }
+    
+    Duration duration = Duration.between(session.getFrom(), session.getTo());
+    if (duration.toMinutes() < 30 || duration.toMinutes() > 180) {
+        throw new ValidationException("Session duration must be between 30 and 180 minutes");
+    }
+    
+    if (session.getPatient() == null) {
+        throw new ValidationException("Session must be associated with a patient");
+    }
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Time Zone Awareness" icon="clock">
+    LocalTime doesn't include timezone. Store timezone separately if patients are in different zones.
+  </Card>
+  <Card title="Schedule Updates" icon="calendar-pen">
+    When a patient's schedule changes, update the existing Session rather than creating a new one.
+  </Card>
+  <Card title="Inactive Sessions" icon="calendar-xmark">
+    Consider adding an active/inactive flag rather than deleting sessions when patients finish treatment.
+  </Card>
+  <Card title="Billing Integration" icon="credit-card">
+    Link sessions to billing records for automated invoicing.
+  </Card>
+</CardGroup>
+
+## Common Queries
+
+### Today's Schedule
+
+```java
+public List<Session> getTodaysSchedule() {
+    DayOfWeek today = LocalDate.now().getDayOfWeek();
+    return sessionRepository.findByDayOfWeek(today);
+}
+```
+
+### Sessions by Time Slot
+
+```java
+public List<Session> getMorningSessions() {
+    return sessionRepository.findByFromBetween(
+        LocalTime.of(6, 0),
+        LocalTime.of(12, 0)
+    );
+}
+```
+
+### Patient Session Count
+
+```java
+public long getSessionCount(Patient patient) {
+    return sessionRepository.countByPatient(patient);
+}
+```
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Patient Entity" icon="user" href="/model/patient">
+    Learn about patient management
+  </Card>
+  <Card title="Clinical History" icon="file-medical" href="/model/clinical-history">
+    Document individual therapy sessions
+  </Card>
+  <Card title="Data Model Overview" icon="diagram-project" href="/model/overview">
+    View complete entity relationships
+  </Card>
+</CardGroup>

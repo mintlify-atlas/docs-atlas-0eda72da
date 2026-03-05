@@ -1,0 +1,1043 @@
+---
+title: 'Repositories'
+description: 'Data access layer for database operations using JPA'
+---
+
+## Overview
+
+The repository layer provides data access functionality for all entities in the Patient Manager application. All repositories extend `BaseRepository`, which provides common transaction management and JPA EntityManager handling.
+
+## Architecture
+
+### Inheritance Hierarchy
+
+```
+BaseRepository (abstract)
+├── PatientRepository
+├── ClinicalHistoryRepository
+├── SessionRepository
+├── RelativeRepository
+├── PatientRelativeRelationRepository
+├── RelativeObservationRepository
+└── ClinicalHistoryFileRepository
+```
+
+### Key Features
+
+- **Transaction Management**: Automatic transaction begin, commit, and rollback
+- **Resource Management**: Automatic EntityManager lifecycle handling
+- **Error Handling**: Automatic rollback on exceptions
+- **Reusable Patterns**: Common CRUD operations inherited from BaseRepository
+
+---
+
+## BaseRepository
+
+**Location**: `src/main/java/com/bo/patientmanager/repository/BaseRepository.java:16`
+
+Abstract base class that provides common functionality for all repositories.
+
+### Constructor
+
+```java
+protected BaseRepository(EntityManagerFactory emf)
+```
+
+Initializes the repository with an EntityManagerFactory.
+
+**Parameters**:
+- `emf` - The EntityManagerFactory for creating EntityManager instances
+
+### Methods
+
+#### getEntityManager
+
+```java
+protected EntityManager getEntityManager()
+```
+
+Creates and returns a new EntityManager instance.
+
+**Returns**: A new EntityManager instance
+
+**Location**: `BaseRepository.java:24`
+
+---
+
+#### execute
+
+```java
+protected <T> T execute(Function<EntityManager, T> action)
+```
+
+Executes a database operation within a transaction with automatic resource management.
+
+**Parameters**:
+- `action` - A function that performs operations using the EntityManager
+
+**Returns**: The result of the action function
+
+**Behavior**:
+1. Creates a new EntityManager
+2. Begins a transaction
+3. Executes the provided action
+4. Commits the transaction on success
+5. Rolls back the transaction on error
+6. Closes the EntityManager in all cases
+
+**Example**:
+```java
+public Patient create(Patient patient) {
+    return execute(em -> {
+        em.persist(patient);
+        return patient;
+    });
+}
+```
+
+**Location**: `BaseRepository.java:28`
+
+---
+
+## PatientRepository
+
+**Location**: `src/main/java/com/bo/patientmanager/repository/PatientRepository.java:15`
+
+Manages database operations for Patient entities.
+
+### Constructor
+
+```java
+public PatientRepository(EntityManagerFactory emf)
+```
+
+### Methods
+
+#### create
+
+```java
+public Patient create(Patient patient)
+```
+
+Persists a new patient to the database.
+
+**Parameters**:
+- `patient` - The patient entity to create
+
+**Returns**: The persisted patient with generated ID
+
+**Example**:
+```java
+PatientRepository repo = new PatientRepository(emf);
+Patient patient = new Patient();
+patient.setName("John Doe");
+patient = repo.create(patient);
+```
+
+**Location**: `PatientRepository.java:20`
+
+---
+
+#### update
+
+```java
+public Patient update(Patient patient)
+```
+
+Updates an existing patient in the database.
+
+**Parameters**:
+- `patient` - The patient entity with updated values
+
+**Returns**: The merged patient entity
+
+**Location**: `PatientRepository.java:28`
+
+---
+
+#### delete
+
+```java
+public void delete(Long id)
+```
+
+Deletes a patient from the database by ID.
+
+**Parameters**:
+- `id` - The ID of the patient to delete
+
+**Location**: `PatientRepository.java:33`
+
+---
+
+#### findById
+
+```java
+public Patient findById(Long id)
+```
+
+Retrieves a patient by their ID.
+
+**Parameters**:
+- `id` - The patient ID
+
+**Returns**: The patient entity, or null if not found
+
+**Location**: `PatientRepository.java:47`
+
+---
+
+#### findAll
+
+```java
+public List<Patient> findAll()
+```
+
+Retrieves all patients from the database.
+
+**Returns**: List of all patient entities
+
+**Location**: `PatientRepository.java:54`
+
+---
+
+## ClinicalHistoryRepository
+
+**Location**: `src/main/java/com/bo/patientmanager/repository/ClinicalHistoryRepository.java:15`
+
+Manages database operations for ClinicalHistory entities.
+
+### Constructor
+
+```java
+public ClinicalHistoryRepository(EntityManagerFactory emf)
+```
+
+### Methods
+
+#### create
+
+```java
+public ClinicalHistory create(ClinicalHistory entity)
+```
+
+Creates a new clinical history record.
+
+**Parameters**:
+- `entity` - The clinical history to create
+
+**Returns**: The persisted entity with generated ID
+
+**Location**: `ClinicalHistoryRepository.java:21`
+
+---
+
+#### update
+
+```java
+public ClinicalHistory update(ClinicalHistory entity)
+```
+
+Updates an existing clinical history record.
+
+**Parameters**:
+- `entity` - The clinical history with updated values
+
+**Returns**: The merged entity
+
+**Location**: `ClinicalHistoryRepository.java:28`
+
+---
+
+#### delete
+
+```java
+public void delete(Long id)
+```
+
+Deletes a clinical history record by ID.
+
+**Parameters**:
+- `id` - The ID of the record to delete
+
+**Location**: `ClinicalHistoryRepository.java:32`
+
+---
+
+#### findById
+
+```java
+public ClinicalHistory findById(Long id)
+```
+
+Retrieves a clinical history record by ID.
+
+**Parameters**:
+- `id` - The record ID
+
+**Returns**: The clinical history entity, or null if not found
+
+**Location**: `ClinicalHistoryRepository.java:40`
+
+---
+
+#### findAll
+
+```java
+public List<ClinicalHistory> findAll()
+```
+
+Retrieves all clinical history records.
+
+**Returns**: List of all clinical history entities
+
+**Location**: `ClinicalHistoryRepository.java:44`
+
+---
+
+## SessionRepository
+
+**Location**: `src/main/java/com/bo/patientmanager/repository/SessionRepository.java:15`
+
+Manages database operations for Session entities with additional query methods.
+
+### Constructor
+
+```java
+public SessionRepository(EntityManagerFactory emf)
+```
+
+### Methods
+
+#### create
+
+```java
+public Session create(Session entity)
+```
+
+Creates a new session record.
+
+**Parameters**:
+- `entity` - The session to create
+
+**Returns**: The persisted entity with generated ID
+
+**Location**: `SessionRepository.java:21`
+
+---
+
+#### update
+
+```java
+public Session update(Session entity)
+```
+
+Updates an existing session record.
+
+**Parameters**:
+- `entity` - The session with updated values
+
+**Returns**: The merged entity
+
+**Location**: `SessionRepository.java:28`
+
+---
+
+#### delete
+
+```java
+public void delete(Long id)
+```
+
+Deletes a session by ID.
+
+**Parameters**:
+- `id` - The ID of the session to delete
+
+**Location**: `SessionRepository.java:32`
+
+---
+
+#### findById
+
+```java
+public Session findById(Long id)
+```
+
+Retrieves a session by ID.
+
+**Parameters**:
+- `id` - The session ID
+
+**Returns**: The session entity, or null if not found
+
+**Location**: `SessionRepository.java:40`
+
+---
+
+#### findAll
+
+```java
+public List<Session> findAll()
+```
+
+Retrieves all sessions.
+
+**Returns**: List of all session entities
+
+**Location**: `SessionRepository.java:44`
+
+---
+
+#### countByPatientId
+
+```java
+public Long countByPatientId(Long patientId)
+```
+
+Counts the number of sessions for a specific patient.
+
+**Parameters**:
+- `patientId` - The patient ID
+
+**Returns**: The number of sessions for the patient
+
+**Example**:
+```java
+SessionRepository repo = new SessionRepository(emf);
+Long sessionCount = repo.countByPatientId(1L);
+System.out.println("Patient has " + sessionCount + " sessions");
+```
+
+**Location**: `SessionRepository.java:51`
+
+---
+
+#### findByPatientId
+
+```java
+public List<Session> findByPatientId(Long patientId)
+```
+
+Retrieves all sessions for a specific patient, ordered by day of week and time.
+
+**Parameters**:
+- `patientId` - The patient ID
+
+**Returns**: List of sessions for the patient, sorted by schedule
+
+**Location**: `SessionRepository.java:63`
+
+---
+
+## RelativeRepository
+
+**Location**: `src/main/java/com/bo/patientmanager/repository/RelativeRepository.java:15`
+
+Manages database operations for Relative entities.
+
+### Constructor
+
+```java
+public RelativeRepository(EntityManagerFactory emf)
+```
+
+### Methods
+
+#### create
+
+```java
+public Relative create(Relative entity)
+```
+
+Creates a new relative record.
+
+**Parameters**:
+- `entity` - The relative to create
+
+**Returns**: The persisted entity with generated ID
+
+**Location**: `RelativeRepository.java:21`
+
+---
+
+#### update
+
+```java
+public Relative update(Relative entity)
+```
+
+Updates an existing relative record.
+
+**Parameters**:
+- `entity` - The relative with updated values
+
+**Returns**: The merged entity
+
+**Location**: `RelativeRepository.java:28`
+
+---
+
+#### delete
+
+```java
+public void delete(Long id)
+```
+
+Deletes a relative by ID.
+
+**Parameters**:
+- `id` - The ID of the relative to delete
+
+**Location**: `RelativeRepository.java:32`
+
+---
+
+#### findById
+
+```java
+public Relative findById(Long id)
+```
+
+Retrieves a relative by ID.
+
+**Parameters**:
+- `id` - The relative ID
+
+**Returns**: The relative entity, or null if not found
+
+**Location**: `RelativeRepository.java:40`
+
+---
+
+#### findAll
+
+```java
+public List<Relative> findAll()
+```
+
+Retrieves all relatives.
+
+**Returns**: List of all relative entities
+
+**Location**: `RelativeRepository.java:44`
+
+---
+
+## PatientRelativeRelationRepository
+
+**Location**: `src/main/java/com/bo/patientmanager/repository/PatientRelativeRelationRepository.java:15`
+
+Manages database operations for PatientRelativeRelation entities, which link patients with their relatives.
+
+### Constructor
+
+```java
+public PatientRelativeRelationRepository(EntityManagerFactory emf)
+```
+
+### Methods
+
+#### create
+
+```java
+public PatientRelativeRelation create(PatientRelativeRelation entity)
+```
+
+Creates a new patient-relative relationship.
+
+**Parameters**:
+- `entity` - The relationship to create
+
+**Returns**: The persisted entity with generated ID
+
+**Location**: `PatientRelativeRelationRepository.java:21`
+
+---
+
+#### update
+
+```java
+public PatientRelativeRelation update(PatientRelativeRelation entity)
+```
+
+Updates an existing patient-relative relationship.
+
+**Parameters**:
+- `entity` - The relationship with updated values
+
+**Returns**: The merged entity
+
+**Location**: `PatientRelativeRelationRepository.java:28`
+
+---
+
+#### delete
+
+```java
+public void delete(Long id)
+```
+
+Deletes a patient-relative relationship by ID.
+
+**Parameters**:
+- `id` - The ID of the relationship to delete
+
+**Location**: `PatientRelativeRelationRepository.java:32`
+
+---
+
+#### findById
+
+```java
+public PatientRelativeRelation findById(Long id)
+```
+
+Retrieves a patient-relative relationship by ID.
+
+**Parameters**:
+- `id` - The relationship ID
+
+**Returns**: The relationship entity, or null if not found
+
+**Location**: `PatientRelativeRelationRepository.java:41`
+
+---
+
+#### findAll
+
+```java
+public List<PatientRelativeRelation> findAll()
+```
+
+Retrieves all patient-relative relationships.
+
+**Returns**: List of all relationship entities
+
+**Location**: `PatientRelativeRelationRepository.java:47`
+
+---
+
+#### findByPatientId
+
+```java
+public List<PatientRelativeRelation> findByPatientId(Long patientId)
+```
+
+Retrieves all relatives associated with a specific patient.
+
+**Parameters**:
+- `patientId` - The patient ID
+
+**Returns**: List of patient-relative relationships for the patient
+
+**Example**:
+```java
+PatientRelativeRelationRepository repo = 
+    new PatientRelativeRelationRepository(emf);
+List<PatientRelativeRelation> relations = repo.findByPatientId(1L);
+for (PatientRelativeRelation relation : relations) {
+    System.out.println(relation.getRelative().getName());
+}
+```
+
+**Location**: `PatientRelativeRelationRepository.java:55`
+
+---
+
+## RelativeObservationRepository
+
+**Location**: `src/main/java/com/bo/patientmanager/repository/RelativeObservationRepository.java:15`
+
+Manages database operations for RelativeObservation entities.
+
+### Constructor
+
+```java
+public RelativeObservationRepository(EntityManagerFactory emf)
+```
+
+### Methods
+
+#### create
+
+```java
+public RelativeObservation create(RelativeObservation entity)
+```
+
+Creates a new observation about a relative.
+
+**Parameters**:
+- `entity` - The observation to create
+
+**Returns**: The persisted entity with generated ID
+
+**Location**: `RelativeObservationRepository.java:21`
+
+---
+
+#### update
+
+```java
+public RelativeObservation update(RelativeObservation entity)
+```
+
+Updates an existing observation.
+
+**Parameters**:
+- `entity` - The observation with updated values
+
+**Returns**: The merged entity
+
+**Location**: `RelativeObservationRepository.java:28`
+
+---
+
+#### delete
+
+```java
+public void delete(Long id)
+```
+
+Deletes an observation by ID.
+
+**Parameters**:
+- `id` - The ID of the observation to delete
+
+**Location**: `RelativeObservationRepository.java:32`
+
+---
+
+#### findById
+
+```java
+public RelativeObservation findById(Long id)
+```
+
+Retrieves an observation by ID.
+
+**Parameters**:
+- `id` - The observation ID
+
+**Returns**: The observation entity, or null if not found
+
+**Location**: `RelativeObservationRepository.java:41`
+
+---
+
+#### findAll
+
+```java
+public List<RelativeObservation> findAll()
+```
+
+Retrieves all observations.
+
+**Returns**: List of all observation entities
+
+**Location**: `RelativeObservationRepository.java:47`
+
+---
+
+#### findByRelation
+
+```java
+public List<RelativeObservation> findByRelation(Long relationId)
+```
+
+Retrieves all observations for a specific patient-relative relationship, ordered by date (most recent first).
+
+**Parameters**:
+- `relationId` - The patient-relative relationship ID
+
+**Returns**: List of observations sorted by date descending
+
+**Location**: `RelativeObservationRepository.java:55`
+
+---
+
+#### findByPatientRelativeRelationId
+
+```java
+public List<RelativeObservation> findByPatientRelativeRelationId(Long patientRelativeRelationId)
+```
+
+Retrieves all observations for a specific patient-relative relationship, ordered by ID.
+
+**Parameters**:
+- `patientRelativeRelationId` - The patient-relative relationship ID
+
+**Returns**: List of observations sorted by ID
+
+**Example**:
+```java
+RelativeObservationRepository repo = 
+    new RelativeObservationRepository(emf);
+List<RelativeObservation> observations = 
+    repo.findByPatientRelativeRelationId(1L);
+for (RelativeObservation obs : observations) {
+    System.out.println(obs.getDate() + ": " + obs.getObservation());
+}
+```
+
+**Location**: `RelativeObservationRepository.java:66`
+
+---
+
+## ClinicalHistoryFileRepository
+
+**Location**: `src/main/java/com/bo/patientmanager/repository/ClinicalHistoryFileRepository.java:16`
+
+Manages database operations for ClinicalHistoryFile entities, which represent files attached to clinical histories.
+
+### Constructor
+
+```java
+public ClinicalHistoryFileRepository(EntityManagerFactory emf)
+```
+
+### Methods
+
+#### create
+
+```java
+public ClinicalHistoryFile create(ClinicalHistoryFile entity)
+```
+
+Creates a new clinical history file record.
+
+**Parameters**:
+- `entity` - The file metadata to create
+
+**Returns**: The persisted entity with generated ID
+
+**Location**: `ClinicalHistoryFileRepository.java:22`
+
+---
+
+#### update
+
+```java
+public ClinicalHistoryFile update(ClinicalHistoryFile entity)
+```
+
+Updates an existing clinical history file record.
+
+**Parameters**:
+- `entity` - The file metadata with updated values
+
+**Returns**: The merged entity
+
+**Location**: `ClinicalHistoryFileRepository.java:29`
+
+---
+
+#### delete
+
+```java
+public void delete(Long id)
+```
+
+Deletes a clinical history file record by ID.
+
+**Parameters**:
+- `id` - The ID of the file record to delete
+
+**Location**: `ClinicalHistoryFileRepository.java:33`
+
+---
+
+#### findById
+
+```java
+public ClinicalHistoryFile findById(Long id)
+```
+
+Retrieves a clinical history file record by ID.
+
+**Parameters**:
+- `id` - The file record ID
+
+**Returns**: The file entity, or null if not found
+
+**Location**: `ClinicalHistoryFileRepository.java:41`
+
+---
+
+#### findAll
+
+```java
+public List<ClinicalHistoryFile> findAll()
+```
+
+Retrieves all clinical history file records.
+
+**Returns**: List of all file entities
+
+**Location**: `ClinicalHistoryFileRepository.java:45`
+
+---
+
+## Usage Patterns
+
+### Creating a Repository Instance
+
+All repositories require an EntityManagerFactory during initialization:
+
+```java
+import jakarta.persistence.EntityManagerFactory;
+import persistence.JPAUtil;
+
+EntityManagerFactory emf = JPAUtil.getEntityManagerFactory();
+PatientRepository patientRepo = new PatientRepository(emf);
+```
+
+### Basic CRUD Operations
+
+```java
+// Create
+Patient patient = new Patient();
+patient.setName("John Doe");
+patient.setEmail("john@example.com");
+patient = patientRepo.create(patient);
+
+// Read
+Patient found = patientRepo.findById(patient.getId());
+
+// Update
+found.setEmail("newemail@example.com");
+found = patientRepo.update(found);
+
+// Delete
+patientRepo.delete(patient.getId());
+```
+
+### Querying with Relationships
+
+```java
+// Get all sessions for a patient
+SessionRepository sessionRepo = new SessionRepository(emf);
+List<Session> sessions = sessionRepo.findByPatientId(patientId);
+
+// Count patient sessions
+Long count = sessionRepo.countByPatientId(patientId);
+
+// Get patient relatives
+PatientRelativeRelationRepository relationRepo = 
+    new PatientRelativeRelationRepository(emf);
+List<PatientRelativeRelation> relatives = 
+    relationRepo.findByPatientId(patientId);
+
+// Get observations for a relative relationship
+RelativeObservationRepository obsRepo = 
+    new RelativeObservationRepository(emf);
+List<RelativeObservation> observations = 
+    obsRepo.findByRelation(relationId);
+```
+
+### Transaction Management
+
+Transactions are automatically managed by the `execute()` method in BaseRepository:
+
+```java
+// This operation runs in a transaction automatically
+Patient patient = patientRepo.create(new Patient());
+
+// If an exception occurs, the transaction is rolled back
+try {
+    patient.setEmail("invalid-email");
+    patientRepo.update(patient); // May throw validation exception
+} catch (Exception e) {
+    // Transaction already rolled back
+    System.err.println("Update failed: " + e.getMessage());
+}
+```
+
+### Error Handling
+
+All repository methods will throw RuntimeException if a database error occurs. The transaction is automatically rolled back:
+
+```java
+try {
+    Patient patient = patientRepo.findById(999L);
+    if (patient == null) {
+        throw new IllegalArgumentException("Patient not found");
+    }
+    // Process patient...
+} catch (RuntimeException e) {
+    // Handle database errors
+    logger.error("Database operation failed", e);
+}
+```
+
+---
+
+## Best Practices
+
+### 1. Repository Initialization
+
+Initialize repositories once and reuse them:
+
+```java
+// Good: Initialize once
+EntityManagerFactory emf = JPAUtil.getEntityManagerFactory();
+PatientRepository patientRepo = new PatientRepository(emf);
+
+// Use multiple times
+Patient p1 = patientRepo.findById(1L);
+Patient p2 = patientRepo.findById(2L);
+```
+
+### 2. Resource Management
+
+EntityManager lifecycle is handled automatically - no manual closing needed:
+
+```java
+// BaseRepository handles this automatically
+Patient patient = patientRepo.findById(id);
+// EntityManager is closed after the operation
+```
+
+### 3. Transaction Boundaries
+
+Each repository method runs in its own transaction:
+
+```java
+// Each method is a separate transaction
+Patient patient = patientRepo.create(new Patient());
+Session session = sessionRepo.create(new Session());
+
+// If you need atomic operations, use a service layer
+```
+
+### 4. Query Optimization
+
+Use specific query methods instead of loading all entities:
+
+```java
+// Good: Specific query
+List<Session> sessions = sessionRepo.findByPatientId(patientId);
+
+// Avoid: Loading all and filtering
+List<Session> allSessions = sessionRepo.findAll();
+// Then filter in Java...
+```
+
+### 5. Null Checking
+
+Always check for null when using findById:
+
+```java
+Patient patient = patientRepo.findById(id);
+if (patient == null) {
+    throw new IllegalArgumentException("Patient not found with ID: " + id);
+}
+```
+
+---
+
+## Related Documentation
+
+- [Models](/api/models) - Entity classes used by repositories
+- [Controllers](/api/controllers) - UI controllers that use repositories
+- [Services](/api/services) - Service layer that may wrap repositories

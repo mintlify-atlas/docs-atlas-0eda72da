@@ -1,0 +1,598 @@
+---
+title: Database Configuration
+description: JPA/Hibernate setup, persistence configuration, and entity management
+---
+
+## Overview
+
+Patient Manager uses:
+- **JPA (Jakarta Persistence API)** - Standard Java persistence API
+- **Hibernate 6.4.4** - JPA implementation
+- **SQLite** - Lightweight embedded database
+- **Hibernate Community SQLite Dialect** - SQLite support for Hibernate
+
+## Persistence Configuration
+
+### persistence.xml
+
+The JPA configuration file is located at `src/main/resources/META-INF/persistence.xml`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="https://jakarta.ee/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="
+               https://jakarta.ee/xml/ns/persistence
+               https://jakarta.ee/xml/ns/persistence/persistence_3_0.xsd"
+             version="3.0">
+
+    <persistence-unit name="patientPU">
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+
+        <properties>
+            <!-- Driver -->
+            <property name="jakarta.persistence.jdbc.driver"
+                      value="org.sqlite.JDBC"/>
+
+            <!-- Database URL -->
+            <property name="jakarta.persistence.jdbc.url"
+                      value="jdbc:sqlite:patient.db"/>
+
+            <!-- Dialect -->
+            <property name="hibernate.dialect"
+                      value="org.hibernate.community.dialect.SQLiteDialect"/>
+
+            <!-- Table creation strategy -->
+            <property name="hibernate.hbm2ddl.auto"
+                      value="update"/>
+
+            <!-- SQL Logging -->
+            <property name="hibernate.show_sql"
+                      value="false"/>
+            
+            <!-- Autocommit -->
+            <property name="hibernate.connection.autocommit" value="false"/>
+            
+            <!-- Unicode Support -->
+            <property name="hibernate.connection.useUnicode" value="true"/>
+        </properties>
+    </persistence-unit>
+</persistence>
+```
+
+### Key Configuration Properties
+
+| Property | Value | Description |
+|----------|-------|-------------|
+| `hibernate.hbm2ddl.auto` | `update` | Auto-creates/updates tables from entities |
+| `hibernate.show_sql` | `false` | SQL logging (set to `true` for debugging) |
+| `hibernate.connection.autocommit` | `false` | Requires explicit transaction management |
+| `hibernate.connection.useUnicode` | `true` | Enables Unicode character support |
+
+### hbm2ddl.auto Options
+
+- `validate` - Validates schema, makes no changes
+- `update` - Updates schema without data loss (recommended for development)
+- `create` - Creates schema, destroying previous data
+- `create-drop` - Creates schema on startup, drops on shutdown
+- `none` - No schema management
+
+## JPAUtil - Database Initialization
+
+The `JPAUtil` class manages the EntityManagerFactory lifecycle and database location.
+
+### User-Specific Database Location
+
+```java
+Path appData = Paths.get(System.getProperty("user.home"), ".patientManager");
+Path dbFile = appData.resolve("patient.db");
+```
+
+This places the database at:
+- **Windows**: `C:\Users\<username>\.patientManager\patient.db`
+- **Linux/Mac**: `/home/<username>/.patientManager/patient.db`
+
+### Database Initialization Logic
+
+```java
+public static EntityManagerFactory getEntityManagerFactory() {
+    if (emf == null) {
+        Path appData = Paths.get(System.getProperty("user.home"), ".patientManager");
+        Path dbFile = appData.resolve("patient.db");
+
+        try {
+            // Create directory if it doesn't exist
+            if (!Files.exists(appData)) {
+                Files.createDirectories(appData);
+            }
+
+            // Copy database template from JAR if it doesn't exist
+            if (!Files.exists(dbFile)) {
+                try (InputStream is = JPAUtil.class.getResourceAsStream("/data/patient.db")) {
+                    if (is == null) {
+                        throw new FileNotFoundException("Database template not found");
+                    }
+                    Files.copy(is, dbFile);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error preparing database", e);
+        }
+
+        // Create EntityManagerFactory pointing to user's database
+        Map<String, Object> props = new HashMap<>();
+        props.put("javax.persistence.jdbc.url", "jdbc:sqlite:" + dbFile.toAbsolutePath());
+
+        emf = Persistence.createEntityManagerFactory("patientPU", props);
+    }
+
+    return emf;
+}
+```
+
+### Benefits of This Approach
+
+1. **User Isolation** - Each user has their own database
+2. **Portability** - Database travels with the user
+3. **Easy Backup** - Simple to backup `~/.patientManager/` folder
+4. **No Admin Rights** - Doesn't require system-wide installation
+5. **Clean Template** - Fresh installs get a clean database
+
+## Entity Model
+
+### Domain Entities
+
+The application has the following JPA entities:
+
+```
+Patient
+├── patientId (PK)
+├── name, lastName, birthday, gender
+├── address, city, country
+├── phone1, phone2, email, social
+├── avatar, observations
+├── derivedFrom, derivedTo
+├── isCurrentPatient, state
+
+ClinicalHistory
+├── clinicHistoryId (PK)
+├── clinicHistoryCode
+├── sessionDate
+├── content, observation, conclusion
+├── keyWords
+├── psychologistName
+└── files (OneToMany → ClinicalHistoryFile)
+
+ClinicalHistoryFile
+├── fileId (PK)
+├── fileName, filePath, fileType
+└── clinicalHistory (ManyToOne)
+
+Relative
+├── relativeId (PK)
+├── name, phone, email
+├── relation, observations
+
+PatientRelativeRelation
+├── relationId (PK)
+├── patient (ManyToOne)
+├── relative (ManyToOne)
+└── relationshipType
+
+RelativeObservation
+├── observationId (PK)
+├── relative (ManyToOne)
+├── observationDate
+└── content
+
+Session
+├── sessionId (PK)
+├── patient (ManyToOne)
+├── sessionDate
+├── duration, notes
+└── nextSessionDate
+```
+
+### Example Entity: Patient
+
+```java
+@Entity
+public class Patient {
+    
+    enum State {
+        ACTIVO,
+        ALTA,
+        ABANDONO,
+        DERIVACION
+    }
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long patientId;
+    
+    private String name;
+    private String lastName;
+    private Date birthday;
+    private String gender;
+    private String avatar;
+    private String address;
+    private String city;
+    private String country;
+    private String phone1;
+    private String phone2;
+    private String email;
+    private String social;
+    private String derivedFrom;
+    private String derivedTo;
+    
+    @Column(length = 4000)
+    private String observations;
+    
+    private boolean isCurrentPatient;
+    private State state;
+
+    public Patient() {
+        this.isCurrentPatient = true;
+        this.state = State.ACTIVO;
+    }
+    
+    // Getters and setters...
+}
+```
+
+### JPA Annotations Used
+
+| Annotation | Purpose | Example |
+|------------|---------|----------|
+| `@Entity` | Marks class as JPA entity | `@Entity public class Patient` |
+| `@Id` | Primary key field | `@Id private Long patientId` |
+| `@GeneratedValue` | Auto-generated ID | `@GeneratedValue(strategy = GenerationType.IDENTITY)` |
+| `@Column` | Column customization | `@Column(length = 4000)` |
+| `@OneToMany` | One-to-many relationship | `@OneToMany(mappedBy = "clinicalHistory")` |
+| `@ManyToOne` | Many-to-one relationship | `@ManyToOne private Patient patient` |
+
+## Transaction Management
+
+### Automatic Transaction Handling
+
+The `BaseRepository.execute()` method handles all transaction management:
+
+```java
+protected <T> T execute(Function<EntityManager, T> action) {
+    EntityManager em = getEntityManager();
+    
+    try {
+        // Start transaction
+        em.getTransaction().begin();
+        
+        // Execute the operation
+        T result = action.apply(em);
+        
+        // Commit if successful
+        em.getTransaction().commit();
+        
+        return result;
+        
+    } catch (RuntimeException ex) {
+        // Rollback on any error
+        if (em.getTransaction().isActive()) {
+            em.getTransaction().rollback();
+        }
+        throw ex;
+        
+    } finally {
+        // Always close EntityManager
+        em.close();
+    }
+}
+```
+
+### Transaction Lifecycle
+
+```
+1. getEntityManager()     → Create new EntityManager
+2. begin()                → Start transaction
+3. action.apply(em)       → Execute database operation
+4. commit()               → Persist changes (if successful)
+   OR
+   rollback()             → Revert changes (if error)
+5. close()                → Release resources
+```
+
+### Example: Creating a Patient
+
+```java
+public Patient create(Patient patient) {
+    return execute(em -> {
+        em.persist(patient);  // Persist to database
+        return patient;        // Return persisted entity (with ID)
+    });
+}
+```
+
+The lambda is executed within a transaction:
+- If `persist()` succeeds → transaction commits
+- If `persist()` fails → transaction rolls back automatically
+- EntityManager is always closed
+
+## CRUD Operations
+
+### Create
+
+```java
+Patient patient = new Patient();
+patient.setName("John");
+patient.setLastName("Doe");
+
+Patient saved = patientRepository.create(patient);
+System.out.println("Created with ID: " + saved.getPatientId());
+```
+
+### Read
+
+```java
+// Find by ID
+Patient patient = patientRepository.findById(1L);
+
+// Find all
+List<Patient> allPatients = patientRepository.findAll();
+
+// Custom query
+List<Patient> activePatients = execute(em ->
+    em.createQuery(
+        "SELECT p FROM Patient p WHERE p.isCurrentPatient = true",
+        Patient.class
+    ).getResultList()
+);
+```
+
+### Update
+
+```java
+Patient patient = patientRepository.findById(1L);
+patient.setEmail("newemail@example.com");
+Patient updated = patientRepository.update(patient);
+```
+
+### Delete
+
+```java
+public void delete(Long id) {
+    execute(em -> {
+        Patient p = em.find(Patient.class, id);
+        if (p != null) {
+            em.remove(p);
+        }
+        return null;
+    });
+}
+```
+
+## JPQL Queries
+
+### Basic Query
+
+```java
+List<Patient> patients = execute(em ->
+    em.createQuery("FROM Patient", Patient.class)
+      .getResultList()
+);
+```
+
+### Query with WHERE Clause
+
+```java
+List<Patient> patients = execute(em ->
+    em.createQuery(
+        "SELECT p FROM Patient p WHERE p.city = :city",
+        Patient.class
+    )
+    .setParameter("city", "La Paz")
+    .getResultList()
+);
+```
+
+### Query with JOIN
+
+```java
+List<ClinicalHistory> histories = execute(em ->
+    em.createQuery(
+        "SELECT ch FROM ClinicalHistory ch " +
+        "JOIN FETCH ch.files " +
+        "WHERE ch.clinicHistoryCode = :code",
+        ClinicalHistory.class
+    )
+    .setParameter("code", "HC001")
+    .getResultList()
+);
+```
+
+### Query with Pagination
+
+```java
+List<Patient> page = execute(em ->
+    em.createQuery("FROM Patient ORDER BY lastName", Patient.class)
+      .setFirstResult(0)   // offset
+      .setMaxResults(10)   // limit
+      .getResultList()
+);
+```
+
+## SQLite Considerations
+
+### Limitations
+
+1. **No Foreign Key Constraints** (by default)
+   - SQLite doesn't enforce FK constraints unless enabled
+   - Hibernate handles relationships in code
+
+2. **Limited ALTER TABLE**
+   - Can't drop columns
+   - Can't modify column types
+   - Use `create-drop` for schema changes in development
+
+3. **Single Writer**
+   - Only one write operation at a time
+   - Multiple readers are fine
+
+4. **Type Affinity**
+   - SQLite uses dynamic typing
+   - Hibernate dialect handles type mapping
+
+### Optimizations
+
+**Enable Write-Ahead Logging (WAL)**:
+
+```java
+props.put("hibernate.connection.url", 
+    "jdbc:sqlite:" + dbFile.toAbsolutePath() + "?journal_mode=WAL");
+```
+
+Benefits:
+- Better concurrency
+- Faster writes
+- More robust
+
+**Connection Pooling** (for production):
+
+```xml
+<property name="hibernate.connection.pool_size" value="10"/>
+```
+
+## Debugging
+
+### Enable SQL Logging
+
+In `persistence.xml`:
+
+```xml
+<property name="hibernate.show_sql" value="true"/>
+<property name="hibernate.format_sql" value="true"/>
+<property name="hibernate.use_sql_comments" value="true"/>
+```
+
+Output:
+```sql
+Hibernate: 
+    /* insert for
+        com.bo.patientmanager.model.Patient */
+    insert 
+    into
+        Patient
+        (address, birthday, city, ...) 
+    values
+        (?, ?, ?, ...)
+```
+
+### View Database Contents
+
+Use SQLite command-line tool:
+
+```bash
+sqlite3 ~/.patientManager/patient.db
+
+# List tables
+.tables
+
+# View schema
+.schema Patient
+
+# Query data
+SELECT * FROM Patient;
+
+# Exit
+.quit
+```
+
+Or use a GUI tool:
+- **DB Browser for SQLite** (free, cross-platform)
+- **DBeaver** (free, supports multiple databases)
+- **DataGrip** (paid, JetBrains IDE)
+
+## Best Practices
+
+### 1. Always Use Transactions
+
+```java
+// Good - uses execute() which manages transactions
+public Patient create(Patient patient) {
+    return execute(em -> {
+        em.persist(patient);
+        return patient;
+    });
+}
+
+// Bad - manual transaction management (error-prone)
+public Patient create(Patient patient) {
+    EntityManager em = getEntityManager();
+    em.getTransaction().begin();
+    em.persist(patient);
+    em.getTransaction().commit();
+    return patient; // What if this throws? Transaction not closed!
+}
+```
+
+### 2. Close EntityManagers
+
+The `execute()` method ensures EntityManagers are always closed in the `finally` block.
+
+### 3. Handle Optimistic Locking
+
+Add version field to entities:
+
+```java
+@Entity
+public class Patient {
+    @Version
+    private Long version;
+    
+    // ... other fields
+}
+```
+
+### 4. Use Named Queries
+
+For frequently used queries:
+
+```java
+@Entity
+@NamedQuery(
+    name = "Patient.findByCity",
+    query = "SELECT p FROM Patient p WHERE p.city = :city"
+)
+public class Patient {
+    // ...
+}
+
+// Usage
+List<Patient> patients = em.createNamedQuery("Patient.findByCity", Patient.class)
+    .setParameter("city", "La Paz")
+    .getResultList();
+```
+
+### 5. Lazy Loading Considerations
+
+```java
+// Fetch associations when needed
+@OneToMany(mappedBy = "clinicalHistory", fetch = FetchType.LAZY)
+private List<ClinicalHistoryFile> files;
+
+// Use JOIN FETCH in queries to avoid N+1 problem
+List<ClinicalHistory> histories = em.createQuery(
+    "SELECT ch FROM ClinicalHistory ch JOIN FETCH ch.files",
+    ClinicalHistory.class
+).getResultList();
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="GUI Components" icon="window-maximize" href="/dev/gui-components">
+    Learn about custom Swing components
+  </Card>
+  
+  <Card title="Architecture" icon="diagram-project" href="/dev/architecture">
+    Understand the application architecture
+  </Card>
+</CardGroup>

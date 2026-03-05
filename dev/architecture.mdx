@@ -1,0 +1,492 @@
+---
+title: Application Architecture
+description: Understanding Patient Manager's architecture and design patterns
+---
+
+## Overview
+
+Patient Manager follows a **layered architecture** with clear separation of concerns:
+
+```
+┌─────────────────────────────────────────┐
+│         Presentation Layer              │
+│    (Swing GUI Components)               │
+│  MainWindow, Forms, Panels, Dialogs     │
+└───────────────┬─────────────────────────┘
+                │
+                ▼
+┌─────────────────────────────────────────┐
+│         Service Layer                   │
+│    (Business Logic)                     │
+│  PatientService, SessionService, etc.   │
+└───────────────┬─────────────────────────┘
+                │
+                ▼
+┌─────────────────────────────────────────┐
+│         Repository Layer                │
+│    (Data Access)                        │
+│  PatientRepository, BaseRepository      │
+└───────────────┬─────────────────────────┘
+                │
+                ▼
+┌─────────────────────────────────────────┐
+│         Persistence Layer               │
+│    (JPA/Hibernate + SQLite)             │
+│  EntityManager, JPAUtil                 │
+└─────────────────────────────────────────┘
+```
+
+## Design Patterns
+
+### 1. Repository Pattern
+
+All data access is encapsulated in repository classes that extend `BaseRepository`.
+
+**BaseRepository** (`BaseRepository.java:16-53`):
+
+```java
+public abstract class BaseRepository {
+    protected EntityManagerFactory emf;
+
+    protected BaseRepository(EntityManagerFactory emf) {
+        this.emf = emf;
+    }
+    
+    protected EntityManager getEntityManager() {
+        return emf.createEntityManager();
+    }
+
+    protected <T> T execute(Function<EntityManager, T> action) {
+        EntityManager em = getEntityManager();
+        try {
+            em.getTransaction().begin();
+            T result = action.apply(em);
+            em.getTransaction().commit();
+            return result;
+        } catch (RuntimeException ex) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw ex;
+        } finally {
+            em.close();
+        }
+    }
+}
+```
+
+**Key Features**:
+- Automatic transaction management
+- Automatic rollback on errors
+- Resource cleanup in finally block
+- Generic execute method for all operations
+
+**Example Repository** (`PatientRepository.java:15-61`):
+
+```java
+public class PatientRepository extends BaseRepository {
+    public PatientRepository(EntityManagerFactory emf) {
+        super(emf);
+    }
+
+    public Patient create(Patient patient) {
+        return execute(em -> {
+            em.persist(patient);
+            return patient;
+        });
+    }
+
+    public Patient update(Patient patient) {
+        return execute(em -> em.merge(patient));
+    }
+
+    public Patient findById(Long id) {
+        return execute(em -> em.find(Patient.class, id));
+    }
+
+    public List<Patient> findAll() {
+        return execute(em ->
+            em.createQuery("from Patient", Patient.class)
+              .getResultList()
+        );
+    }
+}
+```
+
+### 2. Service Layer Pattern
+
+Business logic is isolated in service classes that coordinate repositories.
+
+**PatientService** (`PatientService.java:16-39`):
+
+```java
+public class PatientService {
+    private final PatientRepository patientRepository;
+
+    public PatientService(EntityManagerFactory emf) {
+        this.patientRepository = new PatientRepository(emf);
+    }
+
+    public Patient create(Patient p) {
+        return patientRepository.create(p);
+    }
+
+    public Patient update(Patient p) {
+        return patientRepository.update(p);
+    }
+
+    public Patient findById(Long id) {
+        return patientRepository.findById(id);
+    }
+
+    public List<Patient> findAll() {
+        return patientRepository.findAll();
+    }
+}
+```
+
+### 3. Service Manager (Facade Pattern)
+
+The `ServiceManager` provides a single entry point to all services.
+
+**ServiceManager** (`ServiceManager.java:13-54`):
+
+```java
+public class ServiceManager {
+    EntityManagerFactory em = null;
+    private PatientService patientService = null;
+    private SessionService sessionService = null;
+    private PatientRelativeRelationService patientRelativeRelationService = null;
+    private RelativeObservationService relativeObservationService = null;
+    private RelativeService relativeService = null;
+
+    public ServiceManager(EntityManagerFactory em) {
+        this.em = em;
+        patientService = new PatientService(em);
+        sessionService = new SessionService(em);
+        patientRelativeRelationService = new PatientRelativeRelationService(em);
+        relativeObservationService = new RelativeObservationService(em);
+        relativeService = new RelativeService(em);
+    }
+
+    public PatientService getPatientService() {
+        return patientService;
+    }
+
+    public SessionService getSessionService() {
+        return sessionService;
+    }
+    
+    // ... other getters
+}
+```
+
+**Usage in GUI** (`MainWindow.java:26-28`):
+
+```java
+EntityManagerFactory em = JPAUtil.getEntityManagerFactory();
+ServiceManager serviceManager = new ServiceManager(em);
+```
+
+### 4. Singleton Pattern
+
+**JPAUtil** - Ensures single EntityManagerFactory instance:
+
+```java
+public class JPAUtil {
+    private static EntityManagerFactory emf;
+
+    public static EntityManagerFactory getEntityManagerFactory() {
+        if (emf == null) {
+            // Initialize once
+            emf = Persistence.createEntityManagerFactory("patientPU", props);
+        }
+        return emf;
+    }
+}
+```
+
+**ThemeManager** - Global theme management:
+
+```java
+public final class ThemeManager {
+    private static AppTheme current = AppTheme.CLASSIC;
+    private static final List<Runnable> listeners = new ArrayList<>();
+
+    private ThemeManager() {} // Prevent instantiation
+
+    public static AppTheme getTheme() {
+        return current;
+    }
+
+    public static void setTheme(AppTheme theme) {
+        // Update theme and notify listeners
+    }
+}
+```
+
+### 5. Observer Pattern
+
+The theme system uses observers to notify components of theme changes.
+
+**Theme Listener Registration** (`ThemeManager.java:25-46`):
+
+```java
+public static void addThemeListener(Runnable r) {
+    listeners.add(r);
+}
+
+public static void setTheme(AppTheme theme) {
+    if(theme == current) return;
+    
+    current = theme;
+    applyLookAndFeel(theme);
+    
+    // Notify all listeners
+    for(Runnable r : listeners) {
+        r.run();
+    }
+    
+    refreshAllWindows();
+}
+```
+
+**Component Registration** (`BackgroundPanel.java:31-35`):
+
+```java
+ThemeManager.addThemeListener(() -> {
+    loadBackground();
+    repaint();
+});
+```
+
+### 6. Template Method Pattern
+
+The `execute` method in `BaseRepository` is a template for database operations:
+
+```java
+protected <T> T execute(Function<EntityManager, T> action) {
+    EntityManager em = getEntityManager();
+    try {
+        em.getTransaction().begin();      // 1. Start transaction
+        T result = action.apply(em);      // 2. Execute custom logic
+        em.getTransaction().commit();     // 3. Commit transaction
+        return result;
+    } catch (RuntimeException ex) {
+        if (em.getTransaction().isActive()) {
+            em.getTransaction().rollback(); // 4. Rollback on error
+        }
+        throw ex;
+    } finally {
+        em.close();                       // 5. Cleanup resources
+    }
+}
+```
+
+## Package Structure
+
+### Model Package (`com.bo.patientmanager.model`)
+
+Contains JPA entity classes representing the domain model:
+
+- `Patient` - Patient information and demographics
+- `ClinicalHistory` - Clinical session records
+- `ClinicalHistoryFile` - Attachments to clinical records
+- `Relative` - Patient relatives/contacts
+- `PatientRelativeRelation` - Relationship between patients and relatives
+- `RelativeObservation` - Notes about relatives
+- `Session` - Therapy session information
+
+### Repository Package (`com.bo.patientmanager.repository`)
+
+Data access layer with repository classes:
+
+- `BaseRepository` - Abstract base class with transaction management
+- `PatientRepository` - Patient data access
+- `ClinicalHistoryRepository` - Clinical history data access
+- `RelativeRepository` - Relative data access
+- `SessionRepository` - Session data access
+- etc.
+
+### Service Package (`com.bo.patientmanager.service`)
+
+Business logic layer:
+
+- `ServiceManager` - Facade for all services
+- `PatientService` - Patient business logic
+- `ClinicalHistoryService` - Clinical history operations
+- `RelativeService` - Relative management
+- `SessionService` - Session management
+- etc.
+
+### GUI Package (`com.bo.patientmanager.gui`)
+
+User interface components:
+
+```
+gui/
+├── MainWindow.java                    # Main application window
+├── HomePane.java                      # Home screen
+├── LoadPatientForm.java               # Patient creation form
+├── allPatientsViews/                  # Patient-related views
+│   ├── SeeAllPatientsPane.java       # Patient list view
+│   ├── PatientDataPane.java          # Patient details
+│   ├── RelativeAddForm.java          # Add relative form
+│   └── ObservationAddForm.java       # Add observation form
+├── component/                         # Custom UI components
+│   ├── BackgroundPanel.java          # Panel with background image
+│   └── CustomMessageDialog.java      # Styled message dialogs
+└── theme/                             # Theme management
+    ├── ThemeManager.java             # Theme controller
+    ├── AppTheme.java                 # Theme definitions
+    └── ThemePickerPane.java          # Theme selection UI
+```
+
+### Persistence Package (`persistence`)
+
+JPA configuration and utilities:
+
+- `JPAUtil` - EntityManagerFactory initialization and database setup
+
+### Utils Package (`utils`)
+
+Utility classes:
+
+- `DateMapper` - Date conversion utilities
+- `ModelMapper` - Object mapping utilities
+
+## Application Flow
+
+### Startup Sequence
+
+1. **Main Entry Point** (`PatientManager.java:14-20`):
+
+```java
+public static void main(String[] args) {
+    MainWindow mainWindow = new MainWindow();
+    mainWindow.setVisible(true);
+    mainWindow.setLocationRelativeTo(null);
+}
+```
+
+2. **MainWindow Initialization** (`MainWindow.java:33-61`):
+
+```java
+public MainWindow() {
+    // 1. Set initial theme
+    ThemeManager.setTheme(AppTheme.CLASSIC);
+    
+    // 2. Initialize UI components
+    initComponents();
+    
+    // 3. Setup background panel
+    bgContent = new BackgroundPanel();
+    bgContent.setLayout(new BorderLayout());
+    content.add(bgContent, BorderLayout.CENTER);
+    
+    // 4. Load home view
+    bgContent.setView(new HomePane());
+    
+    // 5. Setup menu background
+    BackgroundPanel menuBackground = new BackgroundPanel(true);
+    menuBackground.add(menuBg, BorderLayout.CENTER);
+    mainBg.add(menuBackground, ...);
+}
+```
+
+3. **Database Initialization** (automatic via JPAUtil):
+
+```java
+EntityManagerFactory em = JPAUtil.getEntityManagerFactory();
+```
+
+### User Action Flow
+
+Example: Loading a new patient
+
+```
+┌──────────────────┐
+│  User clicks     │
+│  "Load Patient"  │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────────────┐
+│  MainWindow.btnLoadNewPatient()  │
+│  Creates LoadPatientForm         │
+│  bgContent.setView(form)         │
+└────────┬─────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────┐
+│  LoadPatientForm                 │
+│  User fills form and submits     │
+└────────┬─────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────┐
+│  serviceManager                  │
+│    .getPatientService()          │
+│    .create(patient)              │
+└────────┬─────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────┐
+│  PatientService.create()         │
+│  Delegates to repository         │
+└────────┬─────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────┐
+│  PatientRepository.create()      │
+│  execute(em -> em.persist())     │
+└────────┬─────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────┐
+│  BaseRepository.execute()        │
+│  - Begin transaction             │
+│  - Persist entity                │
+│  - Commit transaction            │
+│  - Return result                 │
+└──────────────────────────────────┘
+```
+
+## Benefits of This Architecture
+
+### 1. Separation of Concerns
+- UI logic separated from business logic
+- Business logic separated from data access
+- Easy to test each layer independently
+
+### 2. Maintainability
+- Changes to UI don't affect business logic
+- Changes to database don't affect UI
+- Clear location for each type of code
+
+### 3. Reusability
+- Services can be used by multiple UI components
+- Repositories can be used by multiple services
+- Custom components can be reused across views
+
+### 4. Testability
+- Each layer can be tested in isolation
+- Mock dependencies for unit testing
+- Integration tests can test full stack
+
+### 5. Scalability
+- Easy to add new entities (model → repository → service)
+- Easy to add new UI views
+- Easy to add new business logic
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Database Configuration" icon="database" href="/dev/database">
+    Deep dive into JPA/Hibernate configuration
+  </Card>
+  
+  <Card title="GUI Components" icon="window-maximize" href="/dev/gui-components">
+    Learn about custom UI components
+  </Card>
+</CardGroup>

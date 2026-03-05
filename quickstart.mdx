@@ -1,80 +1,562 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get up and running with Patient Manager in minutes - learn the interface and create your first patient record
 ---
 
-## Get started in three steps
+## Launch the Application
 
-Get your documentation site running locally and make your first customization.
+Start Patient Manager using the JAR file:
 
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+```bash
+java -jar target/patientManager-1.0-SNAPSHOT.jar
+```
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  On first launch, the application creates a database at `~/.patientManager/patient.db` and may take a few extra seconds to initialize.
 </Note>
+
+The main window opens with the home screen displayed:
+
+<Frame>
+  <img src="/images/hero.png" alt="Patient Manager Main Window" />
+</Frame>
+
+## Understanding the Interface
+
+The Patient Manager interface consists of two main areas:
+
+### Navigation Menu
+
+The top menu bar provides quick access to all major features:
+
+<CardGroup cols={3}>
+  <Card title="Ver Pacientes" icon="users">
+    View all registered patients in a list view
+  </Card>
+  <Card title="Buscar Paciente" icon="magnifying-glass">
+    Search for specific patients by name or ID
+  </Card>
+  <Card title="Cargar Paciente" icon="user-plus">
+    Add a new patient to the system
+  </Card>
+  <Card title="Cargar Sesión" icon="calendar-plus">
+    Schedule a new therapy session
+  </Card>
+  <Card title="Buscar Historia Clinica" icon="file-medical">
+    Search clinical history records
+  </Card>
+  <Card title="Salir" icon="right-from-bracket">
+    Exit the application
+  </Card>
+</CardGroup>
+
+### Content Area
+
+The main content area displays different views based on your selection from the menu. The home screen shows a welcome message and quick stats.
+
+## Your First Patient
+
+Let's create your first patient record step by step.
+
+<Steps>
+  <Step title="Open the Patient Form">
+    Click the **Cargar Paciente** (Load Patient) button in the top menu.
+
+    <Frame>
+      <img src="/images/load-patient-button.png" alt="Load Patient Button" />
+    </Frame>
+
+    The patient registration form opens in the main content area.
+  </Step>
+
+  <Step title="Enter Basic Information">
+    Fill in the required patient information:
+
+    ```plaintext
+    Name: Juan
+    Last Name: Pérez
+    Birthday: 1990-05-15 (use the date picker)
+    Gender: Male
+    ```
+
+    <Tip>
+      Click the calendar icon next to the birthday field to open an easy-to-use date picker.
+    </Tip>
+  </Step>
+
+  <Step title="Add Contact Details">
+    Enter contact information to stay connected:
+
+    ```plaintext
+    Phone 1: +1 555-0123
+    Phone 2: +1 555-0124 (optional)
+    Email: juan.perez@example.com
+    Address: 123 Main Street
+    City: Santa Cruz
+    Country: Bolivia
+    ```
+
+    <Note>
+      All contact fields are optional, but having at least one phone number or email is recommended.
+    </Note>
+  </Step>
+
+  <Step title="Add Additional Information">
+    Complete the patient profile with:
+
+    ```plaintext
+    Social Media: @juanperez (optional)
+    Derived From: Dr. Rodriguez (referral source)
+    Initial Observations: Patient seeking help with anxiety management
+    ```
+
+    The **Initial Observations** field supports up to 4000 characters for detailed notes.
+  </Step>
+
+  <Step title="Save the Patient">
+    Click the **Save** or **Guardar** button at the bottom of the form.
+
+    The application validates the data and saves the patient record to the database.
+
+    <Check>
+      Success! Your first patient is now in the system.
+    </Check>
+  </Step>
+</Steps>
+
+## View All Patients
+
+Now let's see the patient you just created.
+
+<Steps>
+  <Step title="Open Patient List">
+    Click **Ver Pacientes** (View Patients) in the top menu.
+  </Step>
+
+  <Step title="Browse the Patient List">
+    The `SeeAllPatientsPane` displays all patients in a table or card view:
+
+    - Patient ID
+    - Full name
+    - Age (calculated from birthday)
+    - Contact information
+    - Current status (Active, Discharged, etc.)
+
+    <CodeGroup>
+    ```java Patient Status
+    enum State {
+        ACTIVO,      // Active - currently in treatment
+        ALTA,        // Discharged - treatment completed
+        ABANDONO,    // Abandoned - patient discontinued
+        DERIVACION   // Referred - sent to another provider
+    }
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="View Patient Details">
+    Click on a patient row to open the detailed patient view (`PatientDataPane`).
+
+    This view shows:
+    - Complete patient profile
+    - All clinical histories
+    - Scheduled sessions
+    - Related family members
+  </Step>
+</Steps>
+
+## Schedule a Therapy Session
+
+Create a recurring therapy session for your patient.
+
+<Steps>
+  <Step title="Open Session Form">
+    From the patient detail view, look for the **Add Session** or **Schedule Session** option.
+
+    Alternatively, click **Cargar Sesión** from the main menu.
+  </Step>
+
+  <Step title="Configure the Session">
+    Fill in the session details:
+
+    ```plaintext
+    Patient: Juan Pérez (select from dropdown)
+    Day of Week: Monday
+    Start Time: 10:00 AM
+    End Time: 11:00 AM
+    Mode: In-Person (or Virtual)
+    Billing Rate: 50.00
+    Currency: USD
+    ```
+
+    <CodeGroup>
+    ```java Session.java
+    private DayOfWeek dayOfWeek;     // MONDAY, TUESDAY, etc.
+    private LocalTime from;          // 10:00
+    private LocalTime to;            // 11:00
+    private String mode;             // "In-Person", "Virtual"
+    private String difBillingRate;   // "50.00"
+    private String currency;         // "USD", "BOB", etc.
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Save the Session">
+    Click **Save** to create the recurring session.
+
+    The session is now associated with the patient and will appear in their schedule.
+  </Step>
+</Steps>
+
+## Document a Clinical History
+
+Record notes from a therapy session.
+
+<Steps>
+  <Step title="Access Clinical History Form">
+    There are two ways to create a clinical history:
+
+    1. From the patient detail view, click **Add Clinical History**
+    2. From the main menu, click **Buscar Historia Clinica** and then **New**
+  </Step>
+
+  <Step title="Enter Session Information">
+    Fill in the clinical history form:
+
+    ```plaintext
+    Clinical History Code: CH-2024-001
+    Session Date: 2024-03-05
+    Psychologist Name: Dr. Sarah Martinez
+    ```
+
+    <Tip>
+      The **Clinical History Code** is a unique identifier for easy searching. Use a consistent format like `CH-YYYY-NNN`.
+    </Tip>
+  </Step>
+
+  <Step title="Document the Session">
+    Add detailed session notes:
+
+    ```plaintext
+    Content:
+    Patient discussed recent anxiety triggers related to work stress.
+    Introduced breathing exercises and cognitive restructuring techniques.
+
+    Observation:
+    Patient appears motivated and engaged. Good rapport established.
+    Shows insight into anxiety patterns.
+
+    Conclusion:
+    Continue weekly sessions. Assign homework: daily breathing exercises
+    and thought journal. Review progress next session.
+
+    Keywords: anxiety, work stress, breathing exercises, CBT
+    ```
+
+    Each text field supports up to **4000 characters** for comprehensive documentation.
+
+    <CodeGroup>
+    ```java ClinicalHistory.java
+    @Column(length = 4000)
+    private String content;      // Session content notes
+
+    @Column(length = 4000)
+    private String observation;  // Clinical observations
+
+    @Column(length = 4000)
+    private String conclusion;   // Session conclusions
+
+    private List<String> keyWords; // Searchable tags
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Add Keywords (Optional)">
+    Enter comma-separated keywords to make this record searchable:
+
+    ```plaintext
+    anxiety, work stress, breathing exercises, CBT, cognitive restructuring
+    ```
+
+    Keywords help you find related sessions later.
+  </Step>
+
+  <Step title="Attach Files (Optional)">
+    If you have supporting documents (assessments, diagrams, etc.), attach them to the clinical history.
+
+    The `ClinicalHistoryFile` entity links files to this record.
+  </Step>
+
+  <Step title="Save the Clinical History">
+    Click **Save** to store the clinical history in the database.
+
+    <Check>
+      The clinical history is now permanently linked to the patient record.
+    </Check>
+  </Step>
+</Steps>
+
+## Search for Patients and Records
+
+Quickly find patients or clinical histories.
+
+### Search Patients
+
+<Steps>
+  <Step title="Open Search">
+    Click **Buscar Paciente** (Search Patient) in the top menu.
+  </Step>
+
+  <Step title="Enter Search Criteria">
+    Type any of these:
+    - Patient name (first or last)
+    - Phone number
+    - Email address
+    - Patient ID
+
+    The search is typically case-insensitive and supports partial matches.
+  </Step>
+
+  <Step title="View Results">
+    Matching patients appear in a list. Click on a result to view full details.
+  </Step>
+</Steps>
+
+### Search Clinical Histories
+
+<Steps>
+  <Step title="Open Search">
+    Click **Buscar Historia Clinica** (Search Clinical History) in the top menu.
+  </Step>
+
+  <Step title="Search by Code or Keywords">
+    Enter:
+    - Clinical history code (e.g., `CH-2024-001`)
+    - Keywords (e.g., `anxiety`, `CBT`)
+    - Patient name
+    - Date range
+  </Step>
+
+  <Step title="Review Results">
+    Browse matching clinical histories. Click to view full session notes.
+  </Step>
+</Steps>
+
+## Add Patient Relatives
+
+Track family members and relationships.
+
+<Steps>
+  <Step title="Open Patient Details">
+    Navigate to **Ver Pacientes** and select a patient.
+  </Step>
+
+  <Step title="Add Relative">
+    Look for the **Add Relative** or **Family** section.
+
+    Click **Add** to open the `RelativeAddForm`.
+  </Step>
+
+  <Step title="Enter Relative Information">
+    Fill in the relative's details:
+
+    ```plaintext
+    Name: María Pérez
+    Relationship: Mother
+    Phone: +1 555-0125
+    Email: maria.perez@example.com
+    ```
+  </Step>
+
+  <Step title="Add Observations">
+    Use the `RelativeObservation` feature to document interactions or relevant information about the relative.
+
+    ```plaintext
+    Observation: Mother is very supportive. Attends sessions occasionally.
+    Helpful in understanding family dynamics.
+    ```
+  </Step>
+
+  <Step title="Save">
+    Click **Save** to create the `PatientRelativeRelation` link.
+
+    The relative now appears in the patient's family section.
+  </Step>
+</Steps>
+
+## Customize the Theme
+
+Patient Manager supports multiple themes via FlatLaf.
+
+<Steps>
+  <Step title="Access Theme Settings">
+    The `ThemeManager` class controls the application look and feel.
+
+    The default theme is set in `MainWindow.java`:
+
+    <CodeGroup>
+    ```java MainWindow.java
+    ThemeManager.setTheme(AppTheme.CLASSIC);
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Choose a Theme">
+    Available themes (defined in `AppTheme` enum):
+
+    - **CLASSIC** - Traditional professional look
+    - Other themes defined in the `AppTheme` class
+
+    To change themes, access the theme picker (accessible from specific menu options).
+  </Step>
+
+  <Step title="Apply Theme">
+    Select your preferred theme and the application UI updates immediately.
+  </Step>
+</Steps>
+
+## Understanding Data Storage
+
+All data is stored locally in SQLite:
+
+<CodeGroup>
+```bash Database Location
+# Linux/macOS
+~/.patientManager/patient.db
+
+# Windows
+C:\Users\<YourUsername>\.patientManager\patient.db
+```
+
+```java JPAUtil.java (persistence/JPAUtil.java:26-27)
+Path appData = Paths.get(System.getProperty("user.home"), ".patientManager");
+Path dbFile = appData.resolve("patient.db");
+```
+</CodeGroup>
+
+### Entity Manager Factory
+
+The application uses JPA with Hibernate for database operations:
+
+<CodeGroup>
+```java MainWindow.java (com/bo/patientmanager/gui/MainWindow.java:26-28)
+EntityManagerFactory em = JPAUtil.getEntityManagerFactory();
+
+ServiceManager serviceManager = new ServiceManager(em);
+```
+</CodeGroup>
+
+The `ServiceManager` provides access to all service classes:
+
+- `PatientService` - Patient CRUD operations
+- `SessionService` - Session management
+- `ClinicalHistoryService` - Clinical history operations
+- `RelativeService` - Relative management
+- `RelativeObservationService` - Relative observations
+
+<Note>
+  All data operations are transactional and automatically persisted to the SQLite database.
+</Note>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Patient Information" icon="user">
+    - Always fill in at least name, last name, and one contact method
+    - Use the birthday field to automatically calculate patient age
+    - Keep the status updated (Active, Discharged, etc.)
+    - Use the observations field for important notes visible at a glance
+  </Accordion>
+
+  <Accordion title="Clinical Histories" icon="file-medical">
+    - Use consistent clinical history code formats
+    - Add keywords to every session for easy searching
+    - Document observations and conclusions separately for clarity
+    - Review previous histories before sessions for continuity
+  </Accordion>
+
+  <Accordion title="Sessions" icon="calendar">
+    - Set up recurring sessions with consistent time slots
+    - Update billing rates when they change
+    - Mark session mode (in-person vs virtual) for records
+    - Keep session times realistic for scheduling
+  </Accordion>
+
+  <Accordion title="Data Management" icon="database">
+    - Back up `~/.patientManager/patient.db` regularly
+    - Use descriptive names and codes for easy searching
+    - Keep contact information up to date
+    - Review and update patient status periodically
+  </Accordion>
+</AccordionGroup>
+
+## Common Workflows
+
+### New Patient Intake
+
+1. Click **Cargar Paciente**
+2. Enter demographic and contact information
+3. Add referral source in "Derived From"
+4. Document initial observations
+5. Save the patient
+6. Schedule first session via **Cargar Sesión**
+7. Create initial clinical history after first meeting
+
+### Regular Session Documentation
+
+1. Click **Ver Pacientes** → Select patient
+2. Review previous clinical histories
+3. After session, click **Add Clinical History**
+4. Document session content, observations, and conclusions
+5. Add relevant keywords
+6. Save the record
+
+### Patient Discharge
+
+1. Navigate to patient details
+2. Update status to "ALTA" (Discharged)
+3. Create final clinical history with:
+   - Treatment summary
+   - Progress achieved
+   - Discharge recommendations
+4. Update "Derived To" if referring to another provider
+
+## Next Steps
+
+Now that you understand the basics:
+
+<CardGroup cols={2}>
+  <Card title="User Guide" icon="book" href="/guide/patient-management">
+    Learn all features in depth
+  </Card>
+  <Card title="Data Model" icon="diagram-project" href="/model/overview">
+    Understand the database structure
+  </Card>
+  <Card title="Development Guide" icon="code" href="/dev/setup">
+    Customize and extend Patient Manager
+  </Card>
+  <Card title="API Reference" icon="brackets-curly" href="/api/service-manager">
+    Explore the service layer APIs
+  </Card>
+</CardGroup>
+
+## Keyboard Shortcuts
+
+<Note>
+  Keyboard shortcuts depend on your operating system and the Java Swing framework. Standard shortcuts like Ctrl+C (copy), Ctrl+V (paste), and Tab (navigate fields) work in all forms.
+</Note>
+
+## Getting Help
+
+If you encounter issues or have questions:
+
+- Check the [User Guide](/guide/patient-management) for detailed feature documentation
+- Review the [Troubleshooting section](/installation#troubleshooting) in the installation guide
+- Report bugs or request features on [GitHub Issues](https://github.com/Br1-O/RM-patientManagerApp/issues)
+- Check the console output for error messages
+
+## Video Tutorial
+
+<Tip>
+  For a visual walkthrough, check if there are video tutorials available in the GitHub repository README.
+</Tip>

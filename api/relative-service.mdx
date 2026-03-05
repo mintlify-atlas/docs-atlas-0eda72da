@@ -1,0 +1,477 @@
+---
+title: 'RelativeService'
+description: 'Service layer for managing patient relatives and family member information'
+---
+
+## Overview
+
+The `RelativeService` class provides business logic for managing relatives (family members) of patients. It handles CRUD operations for relative records and works in conjunction with PatientRelativeRelationService to establish relationships between patients and their family members.
+
+## Class Definition
+
+```java
+package com.bo.patientmanager.service;
+
+import com.bo.patientmanager.model.Relative;
+import com.bo.patientmanager.repository.RelativeRepository;
+import jakarta.persistence.EntityManagerFactory;
+import java.util.List;
+
+public class RelativeService {
+    private final RelativeRepository relativeRepository;
+}
+```
+
+## Constructor
+
+### RelativeService(EntityManagerFactory emf)
+
+Creates a new RelativeService instance with the specified EntityManagerFactory.
+
+<ParamField path="emf" type="EntityManagerFactory" required>
+  The JPA EntityManagerFactory for database operations
+</ParamField>
+
+**Example:**
+```java
+EntityManagerFactory emf = Persistence.createEntityManagerFactory("PatientManagerPU");
+RelativeService relativeService = new RelativeService(emf);
+```
+
+## Methods
+
+### create(Relative p)
+
+Creates a new relative record in the database.
+
+<ParamField path="p" type="Relative" required>
+  The Relative object to create with required fields:
+  - `patient` - Associated Patient entity
+  - `name` - Relative's first name
+  - `lastName` - Relative's last name
+  - `relation` - Relationship type (e.g., "Mother", "Father", "Spouse")
+  - `birthday` - Date of birth
+  - `gender` - Gender identifier
+  - Contact information (phone, email, address)
+</ParamField>
+
+<ResponseField name="Relative" type="Relative">
+  The created Relative object with generated ID and persisted data
+</ResponseField>
+
+**Example:**
+```java
+import java.util.Date;
+
+// Get patient
+Patient patient = patientService.findById(1L);
+
+// Create relative (mother)
+Relative mother = new Relative(
+    patient,
+    "Mary",
+    "Smith",
+    "Mother",
+    new Date(65, 3, 20),  // April 20, 1965
+    "Female",
+    "/avatars/mary.jpg",
+    "123 Oak Street",
+    "Boston",
+    "USA",
+    "+1555111222",
+    "+1555333444",
+    "mary.smith@example.com"
+);
+
+Relative created = relativeService.create(mother);
+System.out.println("Created relative ID: " + created.getRelativeId());
+```
+
+---
+
+### update(Relative p)
+
+Updates an existing relative record in the database.
+
+<ParamField path="p" type="Relative" required>
+  The Relative object with updated fields. Must include the existing `relativeId`.
+</ParamField>
+
+<ResponseField name="Relative" type="Relative">
+  The updated Relative object with all current data
+</ResponseField>
+
+**Example:**
+```java
+Relative relative = relativeService.findById(1L);
+
+// Update contact information
+relative.setPhone1("+1555999888");
+relative.setEmail("newemail@example.com");
+relative.setAddress("456 Pine Avenue");
+relative.setCity("Cambridge");
+
+Relative updated = relativeService.update(relative);
+System.out.println("Updated relative: " + updated.getName());
+```
+
+---
+
+### findById(Long id)
+
+Retrieves a relative by their unique identifier.
+
+<ParamField path="id" type="Long" required>
+  The unique relative ID to search for
+</ParamField>
+
+<ResponseField name="Relative" type="Relative">
+  The Relative object if found, null otherwise
+</ResponseField>
+
+**Example:**
+```java
+Long relativeId = 1L;
+Relative relative = relativeService.findById(relativeId);
+
+if (relative != null) {
+    System.out.println("Found relative: " + relative.getName() + " " + relative.getLastName());
+    System.out.println("Relation: " + relative.getRelation());
+    System.out.println("Contact: " + relative.getPhone1());
+    System.out.println("Email: " + relative.getEmail());
+} else {
+    System.out.println("Relative not found");
+}
+```
+
+---
+
+### findAll()
+
+Retrieves all relative records from the database.
+
+<ResponseField name="List<Relative>" type="List<Relative>">
+  A list of all Relative objects in the database
+</ResponseField>
+
+**Example:**
+```java
+List<Relative> allRelatives = relativeService.findAll();
+
+System.out.println("Total relatives in system: " + allRelatives.size());
+
+for (Relative relative : allRelatives) {
+    System.out.println(relative.getRelativeId() + ": " + 
+                       relative.getName() + " " + 
+                       relative.getLastName() + 
+                       " (" + relative.getRelation() + ")");
+}
+```
+
+## Relative Entity Fields
+
+The Relative entity includes the following fields:
+
+### Identification
+- **relativeId** (Long) - Auto-generated unique identifier
+- **patient** (Patient) - Associated patient entity reference
+
+### Personal Information
+- **name** (String) - First name
+- **lastName** (String) - Last name
+- **relation** (String) - Relationship type (Mother, Father, Spouse, Sibling, etc.)
+- **birthday** (Date) - Date of birth
+- **gender** (String) - Gender identifier
+- **avatar** (String) - Avatar image path or URL
+
+### Contact Information
+- **address** (String) - Street address
+- **city** (String) - City
+- **country** (String) - Country
+- **phone1** (String) - Primary phone number
+- **phone2** (String) - Secondary phone number
+- **email** (String) - Email address
+
+## Complete Usage Example
+
+```java
+import com.bo.patientmanager.service.RelativeService;
+import com.bo.patientmanager.service.PatientService;
+import com.bo.patientmanager.service.PatientRelativeRelationService;
+import com.bo.patientmanager.model.Relative;
+import com.bo.patientmanager.model.Patient;
+import com.bo.patientmanager.model.PatientRelativeRelation;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Persistence;
+import java.util.Date;
+import java.util.List;
+
+public class RelativeManagementExample {
+    public static void main(String[] args) {
+        // Initialize services
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("PatientManagerPU");
+        RelativeService relativeService = new RelativeService(emf);
+        PatientService patientService = new PatientService(emf);
+        PatientRelativeRelationService relationService = 
+            new PatientRelativeRelationService(emf);
+        
+        // Get patient
+        Patient patient = patientService.findById(1L);
+        
+        // Create mother
+        Relative mother = new Relative(
+            patient,
+            "Sarah",
+            "Johnson",
+            "Mother",
+            new Date(68, 8, 15),  // September 15, 1968
+            "Female",
+            "/avatars/sarah.jpg",
+            "789 Maple Drive",
+            "Seattle",
+            "USA",
+            "+1206555111",
+            "+1206555222",
+            "sarah.johnson@example.com"
+        );
+        Relative createdMother = relativeService.create(mother);
+        System.out.println("Created mother: " + createdMother.getName());
+        
+        // Create father
+        Relative father = new Relative(
+            patient,
+            "Robert",
+            "Johnson",
+            "Father",
+            new Date(65, 5, 10),  // June 10, 1965
+            "Male",
+            "/avatars/robert.jpg",
+            "789 Maple Drive",
+            "Seattle",
+            "USA",
+            "+1206555333",
+            "+1206555444",
+            "robert.johnson@example.com"
+        );
+        Relative createdFather = relativeService.create(father);
+        System.out.println("Created father: " + createdFather.getName());
+        
+        // Create spouse
+        Relative spouse = new Relative(
+            patient,
+            "Emily",
+            "Johnson",
+            "Spouse",
+            new Date(92, 11, 25),  // December 25, 1992
+            "Female",
+            "/avatars/emily.jpg",
+            "456 Cedar Lane",
+            "Seattle",
+            "USA",
+            "+1206555777",
+            "+1206555888",
+            "emily.johnson@example.com"
+        );
+        Relative createdSpouse = relativeService.create(spouse);
+        
+        // Create relationship with spouse as main contact
+        PatientRelativeRelation spouseRelation = new PatientRelativeRelation(
+            patient,
+            createdSpouse,
+            "Spouse",
+            null,
+            true  // isMainContact
+        );
+        relationService.create(spouseRelation);
+        
+        // List all relatives for patient
+        List<PatientRelativeRelation> relations = 
+            relationService.findByPatient(patient.getPatientId());
+        
+        System.out.println("\nPatient's family members:");
+        for (PatientRelativeRelation relation : relations) {
+            Relative rel = relation.getRelative();
+            String mainContact = relation.isIsMainContact() ? " (Main Contact)" : "";
+            System.out.println(String.format(
+                "- %s %s (%s)%s - %s",
+                rel.getName(),
+                rel.getLastName(),
+                rel.getRelation(),
+                mainContact,
+                rel.getPhone1()
+            ));
+        }
+        
+        // Update relative information
+        createdMother.setPhone2("+1206555999");
+        relativeService.update(createdMother);
+        
+        // Clean up
+        emf.close();
+    }
+}
+```
+
+## Working with Patient-Relative Relationships
+
+Relatives are linked to patients through the PatientRelativeRelationService:
+
+```java
+import com.bo.patientmanager.service.PatientRelativeRelationService;
+import com.bo.patientmanager.model.PatientRelativeRelation;
+
+public void linkRelativeToPatient(Patient patient, Relative relative, String relationType) {
+    PatientRelativeRelationService relationService = 
+        new PatientRelativeRelationService(emf);
+    
+    // Create relationship
+    PatientRelativeRelation relation = new PatientRelativeRelation();
+    relation.setPatient(patient);
+    relation.setRelative(relative);
+    relation.setRelation(relationType);
+    relation.setIsMainContact(false);
+    
+    relationService.create(relation);
+    System.out.println("Linked " + relative.getName() + " to patient");
+}
+```
+
+## Finding Patient's Family Members
+
+```java
+public void displayPatientFamily(Long patientId) {
+    PatientRelativeRelationService relationService = 
+        new PatientRelativeRelationService(emf);
+    RelativeService relativeService = new RelativeService(emf);
+    
+    List<PatientRelativeRelation> relations = relationService.findByPatient(patientId);
+    
+    System.out.println("Family Members:");
+    for (PatientRelativeRelation relation : relations) {
+        Relative relative = relation.getRelative();
+        System.out.println(String.format(
+            "- %s %s (%s)",
+            relative.getName(),
+            relative.getLastName(),
+            relation.getRelation()
+        ));
+        System.out.println("  Phone: " + relative.getPhone1());
+        System.out.println("  Email: " + relative.getEmail());
+        
+        if (relation.isIsMainContact()) {
+            System.out.println("  *** PRIMARY CONTACT ***");
+        }
+    }
+}
+```
+
+## Managing Relative Observations
+
+Add observations about family member interactions:
+
+```java
+import com.bo.patientmanager.service.RelativeObservationService;
+import com.bo.patientmanager.model.RelativeObservation;
+
+public void addObservation(PatientRelativeRelation relation, String content) {
+    RelativeObservationService observationService = new RelativeObservationService(emf);
+    
+    RelativeObservation observation = new RelativeObservation(
+        relation,
+        new Date(),
+        "Phone call with mother. Discussed patient's progress. " +
+        "Mother reports improved communication at home. " +
+        "Family support appears strong."
+    );
+    
+    observationService.create(observation);
+    System.out.println("Added observation about " + relation.getRelative().getName());
+}
+```
+
+## Common Relationship Types
+
+Standard relationship types used in the system:
+
+- **Mother** - Patient's mother
+- **Father** - Patient's father
+- **Spouse** - Patient's spouse or partner
+- **Sibling** - Brother or sister
+- **Child** - Patient's son or daughter
+- **Grandparent** - Grandfather or grandmother
+- **Guardian** - Legal guardian
+- **Friend** - Close friend or support person
+- **Other** - Other relationship type
+
+## Repository Layer
+
+The RelativeService uses `RelativeRepository` for data persistence:
+
+```java
+private final RelativeRepository relativeRepository;
+```
+
+The repository handles:
+- Relative entity persistence
+- Complex relationship management
+- Contact information storage
+
+## Related Services
+
+- [ServiceManager](/api/service-manager) - Access point for all services
+- [PatientService](/api/patient-service) - Patient data management
+- **PatientRelativeRelationService** - Manages patient-relative relationships
+- **RelativeObservationService** - Manages observations about relatives
+
+## Best Practices
+
+1. **Complete Contact Information**: Always collect multiple contact methods
+2. **Emergency Contacts**: Mark primary contacts using PatientRelativeRelationService
+3. **Privacy**: Respect relative privacy and obtain consent for data storage
+4. **Relationship Types**: Use consistent relationship terminology
+5. **Updates**: Keep contact information current
+
+```java
+// Example validation
+public boolean validateRelative(Relative relative) {
+    if (relative.getName() == null || relative.getName().isEmpty()) {
+        System.err.println("Relative name is required");
+        return false;
+    }
+    if (relative.getRelation() == null || relative.getRelation().isEmpty()) {
+        System.err.println("Relationship type is required");
+        return false;
+    }
+    if (relative.getPhone1() == null || relative.getPhone1().isEmpty()) {
+        System.err.println("At least one phone number is required");
+        return false;
+    }
+    return true;
+}
+```
+
+## Emergency Contact Management
+
+```java
+public Relative getEmergencyContact(Long patientId) {
+    PatientRelativeRelationService relationService = 
+        new PatientRelativeRelationService(emf);
+    
+    List<PatientRelativeRelation> relations = relationService.findByPatient(patientId);
+    
+    for (PatientRelativeRelation relation : relations) {
+        if (relation.isIsMainContact()) {
+            return relation.getRelative();
+        }
+    }
+    
+    return null;
+}
+
+// Usage
+Relative emergencyContact = getEmergencyContact(patientId);
+if (emergencyContact != null) {
+    System.out.println("Emergency Contact: " + emergencyContact.getName());
+    System.out.println("Phone: " + emergencyContact.getPhone1());
+}
+```

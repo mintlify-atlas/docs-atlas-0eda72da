@@ -1,0 +1,362 @@
+---
+title: "Clinical History Entity"
+description: "Documentation for ClinicalHistory and ClinicalHistoryFile entities for session documentation"
+---
+
+## Overview
+
+The `ClinicalHistory` entity represents a single therapy session record with detailed notes, observations, and conclusions. It supports file attachments through the `ClinicalHistoryFile` entity and includes keyword tagging for searchability.
+
+**Source:** `src/main/java/com/bo/patientmanager/model/ClinicalHistory.java`
+
+## Clinical History Entity
+
+### Entity Definition
+
+```java
+@Entity
+public class ClinicalHistory {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long clinicHistoryId;
+    
+    private String clinicHistoryCode;
+    private Date sessionDate;
+    
+    @Column(length = 4000)
+    private String content;
+    
+    @Column(length = 4000)
+    private String observation;
+    
+    @Column(length = 4000)
+    private String conclusion;
+    
+    private List<String> keyWords;
+    
+    @OneToMany(mappedBy = "clinicalHistory")
+    private List<ClinicalHistoryFile> files;
+    
+    private String psychologistName;
+}
+```
+
+### Fields
+
+<ParamField path="clinicHistoryId" type="Long" required>
+  Primary key, auto-generated database identifier
+  
+  **Note:** This is the main ID for database operations
+</ParamField>
+
+<ParamField path="clinicHistoryCode" type="String">
+  User-friendly code for searching and referencing clinical history records
+  
+  Unlike the numeric ID, this code can be customized and used in user interfaces for easier record lookup.
+  
+  **Example:** "CH-2024-001", "PAT-123-SESSION-5"
+</ParamField>
+
+<ParamField path="sessionDate" type="Date" required>
+  Date when the therapy session occurred
+  
+  Used for chronological ordering and session history tracking.
+</ParamField>
+
+<ParamField path="content" type="String">
+  Main session notes and content from the therapy session
+  
+  **Database:** `@Column(length = 4000)`
+  
+  This field stores the primary documentation of what occurred during the session, topics discussed, and interventions used.
+</ParamField>
+
+<ParamField path="observation" type="String">
+  Clinical observations about the patient during the session
+  
+  **Database:** `@Column(length = 4000)`
+  
+  Records the psychologist's observations about the patient's mood, behavior, appearance, and other clinical indicators.
+</ParamField>
+
+<ParamField path="conclusion" type="String">
+  Session conclusions, treatment plan updates, and next steps
+  
+  **Database:** `@Column(length = 4000)`
+  
+  Summarizes the session outcomes, any decisions made about treatment direction, and plans for future sessions.
+</ParamField>
+
+<ParamField path="keyWords" type="List<String>">
+  List of keywords or tags associated with this session
+  
+  Enables searching and filtering clinical histories by topic or theme.
+  
+  **Examples:** ["anxiety", "family conflict", "cognitive behavioral therapy", "homework assigned"]
+</ParamField>
+
+<ParamField path="files" type="List<ClinicalHistoryFile>">
+  Collection of file attachments related to this session
+  
+  **Relationship:** One-to-Many with ClinicalHistoryFile
+  
+  See [Clinical History Files](#clinical-history-files) for details.
+</ParamField>
+
+<ParamField path="psychologistName" type="String">
+  Name of the psychologist or therapist who conducted the session
+  
+  Useful in practices with multiple providers.
+</ParamField>
+
+## Clinical History Files
+
+The `ClinicalHistoryFile` entity stores metadata about files attached to clinical history records.
+
+**Source:** `src/main/java/com/bo/patientmanager/model/ClinicalHistoryFile.java`
+
+### Entity Definition
+
+```java
+@Entity
+public class ClinicalHistoryFile {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @ManyToOne
+    @JoinColumn(name = "clinical_history_id", nullable = false)
+    private ClinicalHistory clinicalHistory;
+    
+    private String path;
+    private String fileType;
+    private String description;
+    private List<String> keyWords;
+}
+```
+
+### Fields
+
+<ParamField path="id" type="Long" required>
+  Primary key for the file record
+</ParamField>
+
+<ParamField path="clinicalHistory" type="ClinicalHistory" required>
+  Reference to the parent clinical history record
+  
+  **Relationship:** Many-to-One (required, non-nullable)
+  
+  Each file must be associated with a clinical history record.
+</ParamField>
+
+<ParamField path="path" type="String">
+  File system path or URL where the file is stored
+  
+  **Examples:**
+  - `/storage/clinical/2024/03/patient-123-drawing.pdf`
+  - `https://storage.example.com/files/assessment.pdf`
+</ParamField>
+
+<ParamField path="fileType" type="String">
+  MIME type or file extension
+  
+  **Examples:** `"application/pdf"`, `"image/jpeg"`, `"docx"`
+</ParamField>
+
+<ParamField path="description" type="String">
+  Human-readable description of the file contents
+  
+  **Examples:**
+  - "Patient's self-assessment questionnaire"
+  - "Drawing from art therapy session"
+  - "Homework assignment completed"
+</ParamField>
+
+<ParamField path="keyWords" type="List<String>">
+  Keywords for searching and categorizing the file
+  
+  **Examples:** ["assessment", "intake form"], ["art therapy", "drawing"]
+</ParamField>
+
+## Relationships
+
+### ClinicalHistory → ClinicalHistoryFile (One-to-Many)
+
+```java
+// In ClinicalHistory.java
+@OneToMany(mappedBy = "clinicalHistory")
+private List<ClinicalHistoryFile> files;
+```
+
+```java
+// In ClinicalHistoryFile.java
+@ManyToOne
+@JoinColumn(name = "clinical_history_id", nullable = false)
+private ClinicalHistory clinicalHistory;
+```
+
+A clinical history record can have multiple attached files, but each file belongs to exactly one clinical history record.
+
+## Usage Examples
+
+### Creating a Clinical History Record
+
+```java
+ClinicalHistory history = new ClinicalHistory(
+    "CH-2024-0315-001",                    // clinicHistoryCode
+    new Date(),                             // sessionDate
+    "Patient discussed family conflicts..." // content
+        + " Used CBT techniques to explore...",
+    "Patient appeared anxious but engaged." // observation
+        + " Good eye contact. Cooperative.",
+    "Progress noted. Continue current"      // conclusion
+        + " treatment plan. Homework assigned.",
+    Arrays.asList("anxiety", "family",     // keyWords
+        "CBT", "homework"),
+    new ArrayList<>(),                      // files (empty initially)
+    "Dr. María González"                    // psychologistName
+);
+```
+
+### Adding Files to Clinical History
+
+```java
+// Create file metadata
+ClinicalHistoryFile file = new ClinicalHistoryFile(
+    history,                                 // clinicalHistory
+    "/storage/2024/03/questionnaire.pdf",  // path
+    "application/pdf",                      // fileType
+    "Beck Anxiety Inventory completed",     // description
+    Arrays.asList("assessment", "anxiety")  // keyWords
+);
+
+// Add to clinical history
+history.getFiles().add(file);
+```
+
+### Searching by Keywords
+
+```java
+// Find all sessions tagged with "anxiety"
+List<ClinicalHistory> anxietySessions = clinicalHistoryRepository
+    .findByKeyWordsContaining("anxiety");
+
+// Find sessions by psychologist
+List<ClinicalHistory> drGonzalezSessions = clinicalHistoryRepository
+    .findByPsychologistName("Dr. María González");
+
+// Find sessions in date range
+List<ClinicalHistory> recentSessions = clinicalHistoryRepository
+    .findBySessionDateBetween(startDate, endDate);
+```
+
+### Searching by History Code
+
+```java
+// User-friendly search by code
+ClinicalHistory history = clinicalHistoryRepository
+    .findByClinicHistoryCode("CH-2024-0315-001")
+    .orElseThrow(() -> new NotFoundException("Clinical history not found"));
+```
+
+## Data Organization
+
+### Three-Part Documentation Structure
+
+Clinical histories use a structured approach to session documentation:
+
+<Steps>
+  <Step title="Content">
+    What happened during the session: topics discussed, interventions used, patient responses
+  </Step>
+  <Step title="Observation">
+    Clinical observations: mood, affect, behavior, appearance, engagement level
+  </Step>
+  <Step title="Conclusion">
+    Session summary: progress assessment, treatment plan updates, homework assignments, next steps
+  </Step>
+</Steps>
+
+### Keyword Strategy
+
+<Tip>
+  Develop a consistent keyword taxonomy for your practice:
+  
+  **Conditions:** anxiety, depression, trauma, OCD, PTSD
+  
+  **Techniques:** CBT, DBT, EMDR, mindfulness, exposure therapy
+  
+  **Topics:** family, work, relationships, grief, anger
+  
+  **Administrative:** intake, assessment, termination, crisis
+</Tip>
+
+## File Storage Considerations
+
+<Warning>
+  The `ClinicalHistoryFile` entity stores file metadata, not the actual file content.
+  
+  You must implement separate file storage using:
+  - Local file system storage
+  - Cloud storage (AWS S3, Google Cloud Storage, Azure Blob Storage)
+  - Document management system
+  
+  The `path` field should reference the location where the actual file is stored.
+</Warning>
+
+### Supported File Types
+
+Common file types for clinical documentation:
+
+| File Type | Extension | Use Case |
+|-----------|-----------|----------|
+| PDF | .pdf | Completed assessments, signed forms |
+| Images | .jpg, .png | Art therapy work, diagrams |
+| Documents | .docx, .doc | Treatment plans, reports |
+| Spreadsheets | .xlsx, .xls | Assessment scoring sheets |
+| Audio | .mp3, .wav | Recorded sessions (with consent) |
+
+## Field Length Limits
+
+<Note>
+  Three fields have a 4000-character limit:
+  - `content`
+  - `observation`
+  - `conclusion`
+  
+  If you need to store longer documentation:
+  - Break content into multiple clinical history records
+  - Store extended notes as attached PDF files
+  - Consider increasing the column length in your database schema
+</Note>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Unique Codes" icon="barcode">
+    Use a consistent naming convention for clinicHistoryCode (e.g., include date and sequence number)
+  </Card>
+  <Card title="Timely Documentation" icon="clock">
+    Record sessionDate accurately to maintain chronological treatment records
+  </Card>
+  <Card title="Keyword Consistency" icon="tags">
+    Use standardized keywords across all sessions for effective searching
+  </Card>
+  <Card title="File Security" icon="lock">
+    Implement access controls and encryption for sensitive file attachments
+  </Card>
+</CardGroup>
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Patient Entity" icon="user" href="/model/patient">
+    Link clinical histories to patients
+  </Card>
+  <Card title="Session Entity" icon="calendar" href="/model/session">
+    Schedule appointments that generate clinical histories
+  </Card>
+  <Card title="Data Model Overview" icon="diagram-project" href="/model/overview">
+    View complete entity relationships
+  </Card>
+</CardGroup>

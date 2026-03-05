@@ -1,0 +1,324 @@
+---
+title: Patient Management
+description: Complete guide to registering, searching, viewing, and managing patient records
+icon: user
+---
+
+The Patient Manager application provides comprehensive tools for managing patient information. This guide covers all aspects of patient management from registration to viewing detailed records.
+
+## Overview
+
+Patient management is the core functionality of the application. You can:
+
+- Register new patients with complete personal and contact information
+- View all patients in a searchable table
+- Access detailed patient profiles
+- Track patient status (Active, Discharged, Abandoned, Referred)
+
+## Registering a New Patient
+
+To register a new patient in the system, follow these steps:
+
+<Steps>
+  <Step title="Open Registration Form">
+    Click the **"Cargar Paciente"** (Load Patient) button in the main menu bar at the top of the application.
+    
+    The registration form will open with four main sections: Personal Data, Contact Data, Session Data, and Initial Observations.
+  </Step>
+
+  <Step title="Fill Personal Data">
+    Complete the following fields in the Personal Data section:
+    
+    - **Name** (Nombre): Patient's first name
+    - **Last Name** (Apellido): Patient's last name
+    - **Birth Date** (Fecha Nac.): Select from the date picker
+    - **Gender** (Género): Choose from dropdown (Masculino, Femenino, Gay, Lesbiana, Trans F, Trans M, No Binario, Otro)
+    - **Address** (Dirección): Street address
+    - **City** (Ciudad): City of residence
+    - **Country** (País): Select from dropdown (Argentina, Bolivia, Brasil, Chile, etc.)
+
+    <Note>
+      All patient records are automatically assigned an "Activo" (Active) state when created.
+    </Note>
+  </Step>
+
+  <Step title="Enter Contact Information">
+    Fill in the contact details:
+    
+    - **Phone 1** (Tel. 1): Primary phone number
+    - **Phone 2** (Tel. 2): Secondary phone number (optional)
+    - **Email**: Email address
+    - **Social Media** (Redes): Social media handles or profiles
+  </Step>
+
+  <Step title="Configure Session Data">
+    Set up the patient's therapy sessions (up to 3 sessions):
+    
+    For each session, specify:
+    - **Day** (Día): Day of the week (Lunes, Martes, Miercoles, Jueves, Viernes, Sabado)
+    - **Time** (Horario): Session time from 07:00 to 22:00 in 30-minute intervals
+    - **Mode** (Modalidad): Presencial (In-person) or Virtual
+    
+    Additional session information:
+    - **Special Billing Rate** (Tarifa dif.): If the patient has a different rate
+    - **Currency** (Moneda): Pesos, Dolares, or Euros
+    - **Referred By** (Derivado por): Name of referring professional
+
+    <Info>
+      Sessions are automatically set to 1-hour duration. The end time is calculated as start time + 1 hour.
+    </Info>
+  </Step>
+
+  <Step title="Add Initial Observations">
+    In the Initial Observations section, add any relevant notes about the patient:
+    
+    - Presenting issues
+    - Initial assessment
+    - Treatment goals
+    - Special considerations
+    
+    The text area supports up to 4000 characters.
+  </Step>
+
+  <Step title="Save the Patient Record">
+    Once all information is entered:
+    
+    1. Click the **"Guardar"** (Save) button to create the patient record
+    2. A success message will appear confirming the patient was saved
+    3. The patient and their sessions are saved to the database
+    
+    Or click **"Limpiar"** (Clear) to reset all fields if you need to start over.
+  </Step>
+</Steps>
+
+<Tip>
+  **Best Practice**: Complete as much information as possible during initial registration. This ensures comprehensive patient records from the start.
+</Tip>
+
+## Viewing All Patients
+
+To view the complete list of patients:
+
+<Steps>
+  <Step title="Access Patient List">
+    Click the **"Ver Pacientes"** (View Patients) button in the main menu.
+    
+    This opens a table view showing all registered patients.
+  </Step>
+
+  <Step title="Review Patient Information">
+    The table displays:
+    
+    - **Num**: Patient ID number
+    - **Nombre**: First name
+    - **Apellido**: Last name
+    - **Telefono**: Primary phone number
+    - **Email**: Email address
+    - **Sesiones**: Session schedule summary (e.g., "Lunes 10:00 - Virtual")
+    - **Estado**: Current status (Activo, Alta, Abandono, Derivación)
+  </Step>
+
+  <Step title="Select a Patient">
+    Click on any row in the table to select a patient, then use the action buttons:
+    
+    - **Ver** (View): Open detailed patient profile
+    - **Editar** (Edit): Modify patient information
+    - **Eliminar** (Delete): Remove patient record
+    - **Agregar** (Add): Add a new related item
+  </Step>
+</Steps>
+
+## Viewing Patient Details
+
+The detailed patient view provides comprehensive information organized into sections:
+
+### Personal Information
+
+Displays:
+- Patient status badge
+- Full name
+- Birth date
+- Gender
+- Complete address (street, city, country)
+
+### Contact Information
+
+Shows:
+- Both phone numbers
+- Email address
+- Social media profiles
+
+### Session Information
+
+Lists up to 3 configured therapy sessions with:
+- Day and time
+- Mode (Presencial/Virtual)
+- Billing information
+- Referral information (Derivado por/a)
+
+### Initial Observations
+
+Displays the initial assessment and notes entered during registration.
+
+### Family Members
+
+Shows a list of related family members with:
+- Quick access to relative details
+- Options to add, edit, or delete relatives
+
+<Tip>
+  **Navigation Tip**: Double-click on any family member in the list to open their detailed information in a new window.
+</Tip>
+
+## Patient Status Management
+
+Patients can have one of four status values:
+
+<Accordion title="Active (Activo)">
+  The patient is currently receiving treatment. This is the default status for new patients.
+  
+  **When to use**: Patient is attending regular sessions.
+</Accordion>
+
+<Accordion title="Discharged (Alta)">
+  The patient has successfully completed treatment.
+  
+  **When to use**: Treatment goals have been achieved and patient is being discharged.
+</Accordion>
+
+<Accordion title="Abandoned (Abandono)">
+  The patient has stopped attending sessions without completing treatment.
+  
+  **When to use**: Patient has not attended sessions for an extended period.
+</Accordion>
+
+<Accordion title="Referred (Derivación)">
+  The patient has been referred to another professional or service.
+  
+  **When to use**: Patient needs specialized care or has been transferred to another provider.
+</Accordion>
+
+## Searching for Patients
+
+To quickly find a specific patient:
+
+1. Click **"Buscar Paciente"** (Search Patient) in the main menu
+2. Enter search criteria (name, ID, or other identifiers)
+3. View matching results
+
+<Note>
+  The search function is currently under development. Use the "Ver Pacientes" view and scroll through the table to locate specific patients.
+</Note>
+
+## Data Validation
+
+The application includes validation for patient data:
+
+<CodeGroup>
+```java Patient Model Fields
+// From Patient.java:34-52
+private String name;
+private String lastName;
+private Date birthday;
+private String gender;
+private String address;
+private String city;
+private String country;
+private String phone1;
+private String phone2;
+private String email;
+private String social;
+private String derivedFrom;
+@Column(length = 4000)
+private String observations;
+```
+
+```java Session Configuration
+// From LoadPatientForm.java:710-730
+if(cmbPatientSessionDay1.getSelectedIndex() != 0 
+   && cmbPatientSessionHour1.getSelectedIndex() != 0){
+   
+   String sessionDay1 = (String) cmbPatientSessionDay1.getSelectedItem();
+   DayOfWeek castedSessionDay1 = DateMapper.mapDay(sessionDay1);
+   
+   String sessionHour1 = (String) cmbPatientSessionHour1.getSelectedItem();
+   LocalTime castedSessionHour1 = DateMapper.mapHour(sessionHour1);
+   
+   Session newSession1 = new Session(newPatient,
+      castedSessionDay1,
+      castedSessionHour1,
+      castedSessionHour1.plusHours(1),
+      sessionMode1,
+      difBillingRate,
+      currency    
+   );
+   
+   sessionService.create(newSession1);
+}
+```
+</CodeGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Complete Information" icon="clipboard-check">
+    Fill in as many fields as possible during registration. Complete records improve care quality and data analysis.
+  </Card>
+  
+  <Card title="Verify Contact Data" icon="phone">
+    Always confirm phone numbers and email addresses to ensure reliable communication with patients.
+  </Card>
+  
+  <Card title="Schedule Sessions" icon="calendar">
+    Configure session schedules during registration to track appointments from the beginning.
+  </Card>
+  
+  <Card title="Update Status" icon="toggle-on">
+    Keep patient status current to maintain accurate records and reporting.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Patient not saving">
+    **Possible causes**:
+    - Required fields (Name, Last Name) may be empty
+    - Database connection issue
+    - Invalid date format
+    
+    **Solution**: Verify all required fields are filled and check console for error messages.
+  </Accordion>
+  
+  <Accordion title="Session not appearing">
+    **Possible causes**:
+    - Day and time were not both selected (both are required)
+    - Session index was left at default "-" value
+    
+    **Solution**: Ensure both day and time dropdowns are set to valid values (not "-").
+  </Accordion>
+  
+  <Accordion title="Cannot view patient details">
+    **Possible causes**:
+    - No patient selected in table
+    - Patient ID not found in database
+    
+    **Solution**: Click on a patient row to select it, then click the "Ver" button.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Clinical Histories" icon="file-medical" href="/guide/clinical-histories">
+    Learn how to create and manage clinical history records for patients
+  </Card>
+  
+  <Card title="Patient Relatives" icon="users" href="/guide/patient-relatives">
+    Add and manage family members and emergency contacts
+  </Card>
+  
+  <Card title="Sessions" icon="calendar-days" href="/guide/sessions">
+    Manage and track patient therapy sessions
+  </Card>
+</CardGroup>

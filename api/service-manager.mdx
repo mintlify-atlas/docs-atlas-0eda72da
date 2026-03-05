@@ -1,0 +1,188 @@
+---
+title: 'ServiceManager'
+description: 'Central service manager that provides access to all application services'
+---
+
+## Overview
+
+The `ServiceManager` class is the central service factory that manages and provides access to all service instances in the Patient Manager application. It initializes all services with a shared `EntityManagerFactory` for database operations.
+
+## Class Definition
+
+```java
+package com.bo.patientmanager.service;
+
+public class ServiceManager {
+    EntityManagerFactory em = null;
+    private PatientService patientService = null;
+    private SessionService sessionService = null;
+    private PatientRelativeRelationService patientRelativeRelationService = null;
+    private RelativeObservationService relativeObservationService = null;
+    private RelativeService relativeService = null;
+}
+```
+
+## Constructor
+
+### ServiceManager(EntityManagerFactory em)
+
+Creates a new ServiceManager instance and initializes all service instances.
+
+<ParamField path="em" type="EntityManagerFactory" required>
+  The JPA EntityManagerFactory used for database operations across all services
+</ParamField>
+
+<ResponseField name="ServiceManager" type="ServiceManager">
+  A new ServiceManager instance with all services initialized
+</ResponseField>
+
+**Example:**
+```java
+EntityManagerFactory emf = Persistence.createEntityManagerFactory("PatientManagerPU");
+ServiceManager serviceManager = new ServiceManager(emf);
+```
+
+## Methods
+
+### getEm()
+
+Returns the EntityManagerFactory instance.
+
+<ResponseField name="EntityManagerFactory" type="EntityManagerFactory">
+  The EntityManagerFactory instance used by all services
+</ResponseField>
+
+**Example:**
+```java
+EntityManagerFactory emf = serviceManager.getEm();
+```
+
+---
+
+### getPatientService()
+
+Returns the PatientService instance for managing patient data.
+
+<ResponseField name="PatientService" type="PatientService">
+  The PatientService instance for CRUD operations on patients
+</ResponseField>
+
+**Example:**
+```java
+PatientService patientService = serviceManager.getPatientService();
+List<Patient> allPatients = patientService.findAll();
+```
+
+---
+
+### getSessionService()
+
+Returns the SessionService instance for managing therapy sessions.
+
+<ResponseField name="SessionService" type="SessionService">
+  The SessionService instance for CRUD operations on therapy sessions
+</ResponseField>
+
+**Example:**
+```java
+SessionService sessionService = serviceManager.getSessionService();
+List<Session> patientSessions = sessionService.findByPatient(patientId);
+```
+
+---
+
+### getPatientRelativeRelationService()
+
+Returns the PatientRelativeRelationService instance for managing relationships between patients and relatives.
+
+<ResponseField name="PatientRelativeRelationService" type="PatientRelativeRelationService">
+  The PatientRelativeRelationService instance for managing patient-relative relationships
+</ResponseField>
+
+**Example:**
+```java
+PatientRelativeRelationService relationService = serviceManager.getPatientRelativeRelationService();
+List<PatientRelativeRelation> relations = relationService.findByPatient(patientId);
+```
+
+---
+
+### getRelativeObservationService()
+
+Returns the RelativeObservationService instance for managing observations about relatives.
+
+<ResponseField name="RelativeObservationService" type="RelativeObservationService">
+  The RelativeObservationService instance for managing relative observations
+</ResponseField>
+
+**Example:**
+```java
+RelativeObservationService observationService = serviceManager.getRelativeObservationService();
+List<RelativeObservation> observations = observationService.findByRelation(relationId);
+```
+
+---
+
+### getRelativeService()
+
+Returns the RelativeService instance for managing relative (family member) data.
+
+<ResponseField name="RelativeService" type="RelativeService">
+  The RelativeService instance for CRUD operations on relatives
+</ResponseField>
+
+**Example:**
+```java
+RelativeService relativeService = serviceManager.getRelativeService();
+Relative relative = relativeService.findById(relativeId);
+```
+
+## Usage Example
+
+Complete example showing how to initialize and use the ServiceManager:
+
+```java
+import com.bo.patientmanager.service.ServiceManager;
+import com.bo.patientmanager.model.Patient;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Persistence;
+import java.util.List;
+
+public class Application {
+    public static void main(String[] args) {
+        // Initialize EntityManagerFactory
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("PatientManagerPU");
+        
+        // Create ServiceManager
+        ServiceManager serviceManager = new ServiceManager(emf);
+        
+        // Access individual services
+        PatientService patientService = serviceManager.getPatientService();
+        SessionService sessionService = serviceManager.getSessionService();
+        RelativeService relativeService = serviceManager.getRelativeService();
+        
+        // Use services for operations
+        List<Patient> patients = patientService.findAll();
+        System.out.println("Total patients: " + patients.size());
+        
+        // Clean up
+        emf.close();
+    }
+}
+```
+
+## Service Architecture
+
+The ServiceManager follows the Service Layer pattern:
+
+- **Service Manager**: Central factory for service access
+- **Service Layer**: Business logic and transaction management
+- **Repository Layer**: Data access and persistence
+- **Entity Manager**: JPA database operations
+
+## Related Services
+
+- [PatientService](/api/patient-service) - Patient data management
+- [SessionService](/api/session-service) - Therapy session management
+- [RelativeService](/api/relative-service) - Family member management
+- [ClinicalHistoryService](/api/clinical-history-service) - Clinical history management

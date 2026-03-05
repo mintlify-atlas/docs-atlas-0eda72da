@@ -1,0 +1,380 @@
+---
+title: 'SessionService'
+description: 'Service layer for managing therapy session schedules and patient appointments'
+---
+
+## Overview
+
+The `SessionService` class provides business logic for managing therapy session schedules. It handles CRUD operations for recurring session appointments and provides methods to query sessions by patient.
+
+## Class Definition
+
+```java
+package com.bo.patientmanager.service;
+
+import com.bo.patientmanager.model.Session;
+import com.bo.patientmanager.repository.SessionRepository;
+import jakarta.persistence.EntityManagerFactory;
+import java.util.List;
+
+public class SessionService {
+    private final SessionRepository sessionRepository;
+}
+```
+
+## Constructor
+
+### SessionService(EntityManagerFactory emf)
+
+Creates a new SessionService instance with the specified EntityManagerFactory.
+
+<ParamField path="emf" type="EntityManagerFactory" required>
+  The JPA EntityManagerFactory for database operations
+</ParamField>
+
+**Example:**
+```java
+EntityManagerFactory emf = Persistence.createEntityManagerFactory("PatientManagerPU");
+SessionService sessionService = new SessionService(emf);
+```
+
+## Methods
+
+### create(Session p)
+
+Creates a new therapy session schedule in the database.
+
+<ParamField path="p" type="Session" required>
+  The Session object to create with required fields:
+  - `patient` - Associated Patient entity
+  - `dayOfWeek` - Day of the week for recurring session
+  - `from` - Start time of the session
+  - `to` - End time of the session
+  - `mode` - Session mode (e.g., "In-Person", "Virtual")
+  - `difBillingRate` - Billing rate for the session
+  - `currency` - Currency code (e.g., "USD", "EUR")
+</ParamField>
+
+<ResponseField name="Session" type="Session">
+  The created Session object with generated ID and persisted data
+</ResponseField>
+
+**Example:**
+```java
+import java.time.DayOfWeek;
+import java.time.LocalTime;
+
+// Get patient
+Patient patient = patientService.findById(1L);
+
+// Create new session
+Session session = new Session(
+    patient,
+    DayOfWeek.MONDAY,
+    LocalTime.of(14, 0),  // 2:00 PM
+    LocalTime.of(15, 0),  // 3:00 PM
+    "In-Person",
+    "100",
+    "USD"
+);
+
+Session created = sessionService.create(session);
+System.out.println("Created session ID: " + created.getId());
+```
+
+---
+
+### update(Session p)
+
+Updates an existing therapy session schedule.
+
+<ParamField path="p" type="Session" required>
+  The Session object with updated fields. Must include the existing session `id`.
+</ParamField>
+
+<ResponseField name="Session" type="Session">
+  The updated Session object with all current data
+</ResponseField>
+
+**Example:**
+```java
+Session session = sessionService.findById(1L);
+
+// Change session time
+session.setFrom(LocalTime.of(15, 30));  // 3:30 PM
+session.setTo(LocalTime.of(16, 30));    // 4:30 PM
+
+// Change to virtual session
+session.setMode("Virtual");
+
+Session updated = sessionService.update(session);
+System.out.println("Updated session to: " + updated.getMode());
+```
+
+---
+
+### findById(Long id)
+
+Retrieves a session by its unique identifier.
+
+<ParamField path="id" type="Long" required>
+  The unique session ID to search for
+</ParamField>
+
+<ResponseField name="Session" type="Session">
+  The Session object if found, null otherwise
+</ResponseField>
+
+**Example:**
+```java
+Long sessionId = 1L;
+Session session = sessionService.findById(sessionId);
+
+if (session != null) {
+    System.out.println("Session on " + session.getDayOfWeek());
+    System.out.println("Time: " + session.getFrom() + " - " + session.getTo());
+    System.out.println("Patient: " + session.getPatient().getName());
+    System.out.println("Mode: " + session.getMode());
+} else {
+    System.out.println("Session not found");
+}
+```
+
+---
+
+### findAll()
+
+Retrieves all therapy sessions from the database.
+
+<ResponseField name="List<Session>" type="List<Session>">
+  A list of all Session objects in the database
+</ResponseField>
+
+**Example:**
+```java
+List<Session> allSessions = sessionService.findAll();
+
+System.out.println("Total sessions scheduled: " + allSessions.size());
+
+for (Session session : allSessions) {
+    System.out.println(session.getDayOfWeek() + " " + 
+                       session.getFrom() + "-" + session.getTo() + 
+                       " - " + session.getPatient().getName());
+}
+```
+
+---
+
+### countByPatient(Long patientId)
+
+Counts the total number of sessions scheduled for a specific patient.
+
+<ParamField path="patientId" type="Long" required>
+  The ID of the patient to count sessions for
+</ParamField>
+
+<ResponseField name="Long" type="Long">
+  The total count of sessions for the specified patient
+</ResponseField>
+
+**Example:**
+```java
+Long patientId = 1L;
+Long sessionCount = sessionService.countByPatient(patientId);
+
+System.out.println("Patient has " + sessionCount + " sessions per week");
+
+if (sessionCount > 3) {
+    System.out.println("Patient is in intensive therapy");
+}
+```
+
+---
+
+### findByPatient(Long patientId)
+
+Retrieves all therapy sessions for a specific patient.
+
+<ParamField path="patientId" type="Long" required>
+  The ID of the patient to retrieve sessions for
+</ParamField>
+
+<ResponseField name="List<Session>" type="List<Session>">
+  A list of all Session objects associated with the specified patient
+</ResponseField>
+
+**Example:**
+```java
+Long patientId = 1L;
+List<Session> patientSessions = sessionService.findByPatient(patientId);
+
+System.out.println("Patient's weekly schedule:");
+for (Session session : patientSessions) {
+    System.out.println(session.getDayOfWeek() + ": " + 
+                       session.getFrom() + " - " + session.getTo() + 
+                       " (" + session.getMode() + ")");
+}
+```
+
+## Session Entity Fields
+
+The Session entity includes the following fields:
+
+### Identification
+- **id** (Long) - Auto-generated unique identifier
+- **patient** (Patient) - Associated patient entity reference
+
+### Schedule Information
+- **dayOfWeek** (DayOfWeek) - Day of the week (MONDAY, TUESDAY, etc.)
+- **from** (LocalTime) - Session start time
+- **to** (LocalTime) - Session end time
+
+### Session Details
+- **mode** (String) - Session delivery mode (In-Person, Virtual, Phone, etc.)
+- **difBillingRate** (String) - Billing rate or fee for the session
+- **currency** (String) - Currency code for billing
+
+## Complete Usage Example
+
+```java
+import com.bo.patientmanager.service.SessionService;
+import com.bo.patientmanager.service.PatientService;
+import com.bo.patientmanager.model.Session;
+import com.bo.patientmanager.model.Patient;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Persistence;
+import java.time.DayOfWeek;
+import java.time.LocalTime;
+import java.util.List;
+
+public class SessionManagementExample {
+    public static void main(String[] args) {
+        // Initialize services
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("PatientManagerPU");
+        SessionService sessionService = new SessionService(emf);
+        PatientService patientService = new PatientService(emf);
+        
+        // Get patient
+        Patient patient = patientService.findById(1L);
+        
+        // Schedule Monday session
+        Session mondaySession = new Session(
+            patient,
+            DayOfWeek.MONDAY,
+            LocalTime.of(10, 0),
+            LocalTime.of(11, 0),
+            "In-Person",
+            "120",
+            "USD"
+        );
+        sessionService.create(mondaySession);
+        
+        // Schedule Wednesday session
+        Session wednesdaySession = new Session(
+            patient,
+            DayOfWeek.WEDNESDAY,
+            LocalTime.of(14, 30),
+            LocalTime.of(15, 30),
+            "Virtual",
+            "100",
+            "USD"
+        );
+        sessionService.create(wednesdaySession);
+        
+        // Get patient's schedule
+        List<Session> schedule = sessionService.findByPatient(patient.getPatientId());
+        System.out.println("Patient's weekly schedule:");
+        for (Session session : schedule) {
+            System.out.println(String.format(
+                "%s %s-%s (%s) - $%s %s",
+                session.getDayOfWeek(),
+                session.getFrom(),
+                session.getTo(),
+                session.getMode(),
+                session.getDifBillingRate(),
+                session.getCurrency()
+            ));
+        }
+        
+        // Count sessions
+        Long count = sessionService.countByPatient(patient.getPatientId());
+        System.out.println("Total sessions per week: " + count);
+        
+        // Update a session
+        Session toUpdate = schedule.get(0);
+        toUpdate.setMode("Hybrid");
+        toUpdate.setDifBillingRate("110");
+        sessionService.update(toUpdate);
+        
+        // Clean up
+        emf.close();
+    }
+}
+```
+
+## Weekly Schedule Management
+
+Example of creating a complete weekly schedule:
+
+```java
+public void setupWeeklySchedule(Patient patient) {
+    SessionService sessionService = new SessionService(emf);
+    
+    // Monday and Thursday intensive therapy
+    DayOfWeek[] therapyDays = {DayOfWeek.MONDAY, DayOfWeek.THURSDAY};
+    
+    for (DayOfWeek day : therapyDays) {
+        Session session = new Session(
+            patient,
+            day,
+            LocalTime.of(16, 0),
+            LocalTime.of(17, 0),
+            "In-Person",
+            "150",
+            "USD"
+        );
+        sessionService.create(session);
+    }
+    
+    System.out.println("Created " + therapyDays.length + " sessions");
+}
+```
+
+## Repository Layer
+
+The SessionService uses `SessionRepository` for data persistence:
+
+```java
+private final SessionRepository sessionRepository;
+```
+
+The repository provides:
+- Basic CRUD operations
+- Custom queries for patient-specific sessions
+- Session counting by patient
+
+## Related Services
+
+- [ServiceManager](/api/service-manager) - Access point for all services
+- [PatientService](/api/patient-service) - Manage patient data
+- [ClinicalHistoryService](/api/clinical-history-service) - Clinical session records
+
+## Best Practices
+
+1. **Time Validation**: Always validate that `from` time is before `to` time
+2. **Conflict Detection**: Check for scheduling conflicts before creating sessions
+3. **Patient Association**: Ensure the patient exists before creating sessions
+4. **Billing Updates**: Update billing rates carefully to maintain historical accuracy
+
+```java
+// Example validation
+public boolean isValidSession(Session session) {
+    if (session.getFrom().isAfter(session.getTo())) {
+        return false;
+    }
+    if (session.getPatient() == null) {
+        return false;
+    }
+    return true;
+}
+```

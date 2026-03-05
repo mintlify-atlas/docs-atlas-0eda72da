@@ -1,0 +1,335 @@
+---
+title: Installation
+description: Install and build Patient Manager from source with Java 19+ and Maven
+---
+
+## Prerequisites
+
+Before installing Patient Manager, ensure you have the required software installed on your system.
+
+### Required Software
+
+<AccordionGroup>
+  <Accordion title="Java Development Kit (JDK) 19 or higher" icon="java">
+    Patient Manager requires **Java 19** or higher to run.
+
+    **Check your Java version:**
+    ```bash
+    java -version
+    ```
+
+    Expected output:
+    ```
+    java version "19.0.x" or higher
+    ```
+
+    **Download Java:**
+    - [Oracle JDK](https://www.oracle.com/java/technologies/downloads/)
+    - [OpenJDK](https://openjdk.org/install/)
+    - [Amazon Corretto](https://aws.amazon.com/corretto/)
+
+    <Warning>
+      Java 17 or earlier versions are **not supported**. The application uses Java 19+ features including switch expressions and modern APIs.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Apache Maven (for building from source)" icon="box">
+    Maven is used to manage dependencies and build the application.
+
+    **Check if Maven is installed:**
+    ```bash
+    mvn -version
+    ```
+
+    **Install Maven:**
+    - **macOS**: `brew install maven`
+    - **Ubuntu/Debian**: `sudo apt install maven`
+    - **Windows**: Download from [maven.apache.org](https://maven.apache.org/download.cgi)
+
+    Maven 3.6+ is recommended.
+  </Accordion>
+
+  <Accordion title="Git (for cloning the repository)" icon="git-alt">
+    **Check if Git is installed:**
+    ```bash
+    git --version
+    ```
+
+    **Install Git:**
+    - **macOS**: `brew install git`
+    - **Ubuntu/Debian**: `sudo apt install git`
+    - **Windows**: Download from [git-scm.com](https://git-scm.com/downloads)
+  </Accordion>
+</AccordionGroup>
+
+## Installation Steps
+
+<Steps>
+  <Step title="Clone the Repository">
+    Clone the Patient Manager source code from GitHub:
+
+    ```bash
+    git clone https://github.com/Br1-O/RM-patientManagerApp.git
+    cd RM-patientManagerApp
+    ```
+
+    This downloads all source files, dependencies configuration, and resources needed to build the application.
+  </Step>
+
+  <Step title="Build the Project">
+    Use Maven to compile the source code and package the application:
+
+    ```bash
+    mvn clean package
+    ```
+
+    This command:
+    - Downloads all dependencies (first run may take a few minutes)
+    - Compiles Java source files
+    - Runs tests (if available)
+    - Packages the application into an executable JAR file
+
+    <Note>
+      The compiled JAR file will be located at `target/patientManager-1.0-SNAPSHOT.jar`
+    </Note>
+  </Step>
+
+  <Step title="Verify the Build">
+    Check that the JAR file was created successfully:
+
+    ```bash
+    ls -lh target/*.jar
+    ```
+
+    You should see the `patientManager-1.0-SNAPSHOT.jar` file.
+  </Step>
+</Steps>
+
+## Dependencies
+
+Patient Manager automatically downloads and includes these libraries:
+
+<AccordionGroup>
+  <Accordion title="Persistence & Database" icon="database">
+    ```xml
+    <!-- Hibernate ORM for JPA implementation -->
+    <dependency>
+      <groupId>org.hibernate.orm</groupId>
+      <artifactId>hibernate-core</artifactId>
+      <version>6.4.4.Final</version>
+    </dependency>
+
+    <!-- SQLite JDBC Driver -->
+    <dependency>
+      <groupId>org.xerial</groupId>
+      <artifactId>sqlite-jdbc</artifactId>
+      <version>3.45.1.0</version>
+    </dependency>
+
+    <!-- SQLite Dialect for Hibernate -->
+    <dependency>
+      <groupId>org.hibernate.orm</groupId>
+      <artifactId>hibernate-community-dialects</artifactId>
+      <version>6.4.4.Final</version>
+    </dependency>
+
+    <!-- Jakarta Persistence API -->
+    <dependency>
+      <groupId>jakarta.persistence</groupId>
+      <artifactId>jakarta.persistence-api</artifactId>
+      <version>3.1.0</version>
+    </dependency>
+    ```
+  </Accordion>
+
+  <Accordion title="User Interface" icon="window-maximize">
+    ```xml
+    <!-- FlatLaf Modern Look and Feel -->
+    <dependency>
+      <groupId>com.formdev</groupId>
+      <artifactId>flatlaf</artifactId>
+      <version>3.4</version>
+    </dependency>
+
+    <!-- JCalendar Date Picker -->
+    <dependency>
+      <groupId>com.toedter</groupId>
+      <artifactId>jcalendar</artifactId>
+      <version>1.4</version>
+    </dependency>
+
+    <!-- NetBeans AbsoluteLayout Manager -->
+    <dependency>
+      <groupId>org.netbeans.external</groupId>
+      <artifactId>AbsoluteLayout</artifactId>
+      <version>RELEASE170</version>
+    </dependency>
+    ```
+  </Accordion>
+
+  <Accordion title="Logging" icon="file-lines">
+    ```xml
+    <!-- SLF4J Simple Logger -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>2.0.7</version>
+    </dependency>
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Running the Application
+
+Once built, you can run Patient Manager using Java:
+
+```bash
+java -jar target/patientManager-1.0-SNAPSHOT.jar
+```
+
+<Tip>
+  On first launch, the application automatically creates a SQLite database at `~/.patientManager/patient.db` in your home directory.
+</Tip>
+
+## Database Initialization
+
+The application handles database setup automatically:
+
+<CodeGroup>
+```java JPAUtil.java
+Path appData = Paths.get(System.getProperty("user.home"), ".patientManager");
+Path dbFile = appData.resolve("patient.db");
+
+try {
+    if (!Files.exists(appData)) {
+        Files.createDirectories(appData);
+    }
+
+    // Copy db from JAR if not exists
+    if (!Files.exists(dbFile)) {
+        try (InputStream is = JPAUtil.class.getResourceAsStream("/data/patient.db")) {
+            if (is == null) {
+                throw new FileNotFoundException("Database template not found");
+            }
+            Files.copy(is, dbFile);
+        }
+    }
+} catch (IOException e) {
+    throw new RuntimeException("Error preparing database", e);
+}
+```
+</CodeGroup>
+
+### Database Location
+
+The SQLite database is created in your home directory:
+
+- **Linux/macOS**: `~/.patientManager/patient.db`
+- **Windows**: `C:\Users\<YourUsername>\.patientManager\patient.db`
+
+<Note>
+  The application automatically creates this directory and copies an initial database template on first run.
+</Note>
+
+## System Requirements
+
+### Minimum Requirements
+
+- **OS**: Windows 10+, macOS 11+, or Linux (any recent distribution)
+- **Java**: JDK 19 or higher
+- **RAM**: 512 MB minimum (1 GB recommended)
+- **Disk Space**: 100 MB for application + database
+- **Display**: 1280x800 minimum resolution
+
+### Recommended Requirements
+
+- **OS**: Latest version of Windows, macOS, or Linux
+- **Java**: Latest LTS version (Java 21+)
+- **RAM**: 2 GB or more
+- **Disk Space**: 500 MB for application, database, and attachments
+- **Display**: 1920x1080 or higher
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Build fails with 'release version 19 not supported'" icon="circle-exclamation">
+    This error indicates your Java version is too old.
+
+    **Solution:**
+    1. Verify your Java version: `java -version`
+    2. Install Java 19 or higher
+    3. Set `JAVA_HOME` environment variable to point to Java 19+
+    4. Try building again: `mvn clean package`
+  </Accordion>
+
+  <Accordion title="Application won't start - NoClassDefFoundError" icon="circle-exclamation">
+    This typically means dependencies weren't properly packaged.
+
+    **Solution:**
+    1. Clean the build: `mvn clean`
+    2. Rebuild with dependencies: `mvn package`
+    3. Make sure you're running the JAR from the `target/` directory
+  </Accordion>
+
+  <Accordion title="Database file cannot be created" icon="circle-exclamation">
+    Permission issues may prevent database creation.
+
+    **Solution:**
+    1. Check write permissions in your home directory
+    2. Manually create the directory: `mkdir -p ~/.patientManager`
+    3. On Windows, check your user profile has write access
+  </Accordion>
+
+  <Accordion title="UI looks outdated or doesn't match theme" icon="circle-exclamation">
+    FlatLaf themes may not initialize correctly.
+
+    **Solution:**
+    This is typically handled automatically by the `ThemeManager` class. If issues persist:
+    1. Check the FlatLaf dependency is properly included
+    2. Restart the application
+    3. Check console output for theme-related errors
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+Now that you have Patient Manager installed and running:
+
+<CardGroup cols={2}>
+  <Card title="Quick Start Guide" icon="rocket" href="/quickstart">
+    Learn how to use Patient Manager and create your first patient record
+  </Card>
+  <Card title="User Guide" icon="book" href="/guide/patient-management">
+    Explore all features in detail
+  </Card>
+</CardGroup>
+
+## Alternative: IDE Setup
+
+If you prefer to run the application from an IDE:
+
+### IntelliJ IDEA
+
+1. Open IntelliJ IDEA
+2. Select **File → Open** and choose the project directory
+3. Wait for Maven to import dependencies
+4. Right-click on `PatientManager.java`
+5. Select **Run 'PatientManager.main()'**
+
+### Eclipse
+
+1. Open Eclipse
+2. Select **File → Import → Maven → Existing Maven Projects**
+3. Browse to the project directory
+4. Click **Finish** and wait for dependencies to download
+5. Right-click on `PatientManager.java`
+6. Select **Run As → Java Application**
+
+### NetBeans
+
+1. Open NetBeans
+2. Select **File → Open Project**
+3. Navigate to the project directory
+4. Click **Open Project**
+5. Right-click the project in the Projects view
+6. Select **Run**

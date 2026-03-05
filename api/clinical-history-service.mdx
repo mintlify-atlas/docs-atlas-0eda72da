@@ -1,0 +1,378 @@
+---
+title: 'ClinicalHistoryService'
+description: 'Service layer for managing clinical history records and therapy session documentation'
+---
+
+## Overview
+
+The `ClinicalHistoryService` class provides business logic for managing clinical history records. It handles the creation, updating, and retrieval of therapy session documentation including session content, observations, conclusions, and associated files.
+
+## Class Definition
+
+```java
+package com.bo.patientmanager.service;
+
+import com.bo.patientmanager.model.ClinicalHistory;
+import com.bo.patientmanager.repository.ClinicalHistoryRepository;
+import jakarta.persistence.EntityManagerFactory;
+import java.util.List;
+
+public class ClinicalHistoryService {
+    private final ClinicalHistoryRepository clinicalHistoryRepository;
+}
+```
+
+## Constructor
+
+### ClinicalHistoryService(EntityManagerFactory emf)
+
+Creates a new ClinicalHistoryService instance with the specified EntityManagerFactory.
+
+<ParamField path="emf" type="EntityManagerFactory" required>
+  The JPA EntityManagerFactory for database operations
+</ParamField>
+
+**Example:**
+```java
+EntityManagerFactory emf = Persistence.createEntityManagerFactory("PatientManagerPU");
+ClinicalHistoryService clinicalHistoryService = new ClinicalHistoryService(emf);
+```
+
+## Methods
+
+### create(ClinicalHistory p)
+
+Creates a new clinical history record in the database.
+
+<ParamField path="p" type="ClinicalHistory" required>
+  The ClinicalHistory object to create with required fields:
+  - `clinicHistoryCode` - Unique code for user-facing identification
+  - `sessionDate` - Date of the therapy session
+  - `content` - Main session content and notes (max 4000 chars)
+  - `observation` - Clinical observations (max 4000 chars)
+  - `conclusion` - Session conclusions (max 4000 chars)
+  - `keyWords` - List of keywords for categorization
+  - `psychologistName` - Name of the psychologist conducting the session
+</ParamField>
+
+<ResponseField name="ClinicalHistory" type="ClinicalHistory">
+  The created ClinicalHistory object with generated ID and persisted data
+</ResponseField>
+
+**Example:**
+```java
+import java.util.Arrays;
+import java.util.Date;
+
+ClinicalHistory history = new ClinicalHistory(
+    "CH-2024-001",
+    new Date(),
+    "Patient discussed recent work-related stress and anxiety symptoms. " +
+    "Explored coping mechanisms and established homework for the week.",
+    "Patient appears more open today. Good eye contact maintained. " +
+    "Shows willingness to engage in cognitive restructuring exercises.",
+    "Continue with CBT approach. Patient responding well to treatment. " +
+    "Schedule follow-up in one week.",
+    Arrays.asList("anxiety", "work-stress", "CBT", "coping-strategies"),
+    null,  // Files to be added separately
+    "Dr. Sarah Johnson"
+);
+
+ClinicalHistory created = clinicalHistoryService.create(history);
+System.out.println("Created clinical history: " + created.getClinicHistoryCode());
+```
+
+---
+
+### update(ClinicalHistory p)
+
+Updates an existing clinical history record.
+
+<ParamField path="p" type="ClinicalHistory" required>
+  The ClinicalHistory object with updated fields. Must include the existing `clinicHistoryId`.
+</ParamField>
+
+<ResponseField name="ClinicalHistory" type="ClinicalHistory">
+  The updated ClinicalHistory object with all current data
+</ResponseField>
+
+**Example:**
+```java
+ClinicalHistory history = clinicalHistoryService.findById(1L);
+
+// Add additional observations
+String currentObs = history.getObservation();
+history.setObservation(currentObs + " Follow-up: Patient reported using " +
+                       "breathing exercises successfully.");
+
+// Update keywords
+List<String> updatedKeywords = new ArrayList<>(history.getKeyWords());
+updatedKeywords.add("breathing-exercises");
+history.setKeyWords(updatedKeywords);
+
+ClinicalHistory updated = clinicalHistoryService.update(history);
+System.out.println("Updated clinical history");
+```
+
+---
+
+### findById(Long id)
+
+Retrieves a clinical history record by its unique identifier.
+
+<ParamField path="id" type="Long" required>
+  The unique clinical history ID (clinicHistoryId) to search for
+</ParamField>
+
+<ResponseField name="ClinicalHistory" type="ClinicalHistory">
+  The ClinicalHistory object if found, null otherwise
+</ResponseField>
+
+**Example:**
+```java
+Long historyId = 1L;
+ClinicalHistory history = clinicalHistoryService.findById(historyId);
+
+if (history != null) {
+    System.out.println("Clinical History Code: " + history.getClinicHistoryCode());
+    System.out.println("Session Date: " + history.getSessionDate());
+    System.out.println("Psychologist: " + history.getPsychologistName());
+    System.out.println("Content: " + history.getContent());
+    System.out.println("Keywords: " + String.join(", ", history.getKeyWords()));
+} else {
+    System.out.println("Clinical history not found");
+}
+```
+
+---
+
+### findAll()
+
+Retrieves all clinical history records from the database.
+
+<ResponseField name="List<ClinicalHistory>" type="List<ClinicalHistory>">
+  A list of all ClinicalHistory objects in the database
+</ResponseField>
+
+**Example:**
+```java
+List<ClinicalHistory> allRecords = clinicalHistoryService.findAll();
+
+System.out.println("Total clinical records: " + allRecords.size());
+
+for (ClinicalHistory history : allRecords) {
+    System.out.println(history.getClinicHistoryCode() + " - " + 
+                       history.getSessionDate() + " - " +
+                       history.getPsychologistName());
+}
+```
+
+## ClinicalHistory Entity Fields
+
+The ClinicalHistory entity includes the following fields:
+
+### Identification
+- **clinicHistoryId** (Long) - Auto-generated database ID
+- **clinicHistoryCode** (String) - User-facing unique identifier (e.g., "CH-2024-001")
+
+### Session Information
+- **sessionDate** (Date) - Date of the therapy session
+- **psychologistName** (String) - Name of the conducting psychologist
+
+### Clinical Content
+- **content** (String, max 4000 chars) - Main session notes and content
+- **observation** (String, max 4000 chars) - Clinical observations and behavioral notes
+- **conclusion** (String, max 4000 chars) - Session conclusions and recommendations
+
+### Organization
+- **keyWords** (List\<String>) - Keywords for categorization and search
+- **files** (List\<ClinicalHistoryFile>) - Associated files and attachments
+
+## Complete Usage Example
+
+```java
+import com.bo.patientmanager.service.ClinicalHistoryService;
+import com.bo.patientmanager.model.ClinicalHistory;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Persistence;
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+
+public class ClinicalHistoryExample {
+    public static void main(String[] args) {
+        // Initialize service
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("PatientManagerPU");
+        ClinicalHistoryService historyService = new ClinicalHistoryService(emf);
+        
+        // Create comprehensive clinical record
+        ClinicalHistory newRecord = new ClinicalHistory();
+        newRecord.setClinicHistoryCode("CH-2024-003");
+        newRecord.setSessionDate(new Date());
+        newRecord.setPsychologistName("Dr. Michael Chen");
+        
+        // Session content
+        newRecord.setContent(
+            "Session focused on anxiety management techniques. " +
+            "Patient presented with elevated stress levels related to upcoming job interview. " +
+            "Practiced progressive muscle relaxation and cognitive reframing exercises. " +
+            "Patient successfully identified and challenged three negative automatic thoughts. " +
+            "Assigned homework: daily relaxation practice and thought journal."
+        );
+        
+        // Observations
+        newRecord.setObservation(
+            "Patient demonstrated good engagement throughout session. " +
+            "Notable improvement in self-awareness compared to previous sessions. " +
+            "Body language indicated initial tension that decreased as session progressed. " +
+            "Patient expressed motivation to continue practicing learned techniques."
+        );
+        
+        // Conclusions
+        newRecord.setConclusion(
+            "Patient is making steady progress in anxiety management. " +
+            "Continue with CBT protocol. Next session will review homework completion " +
+            "and introduce exposure hierarchy for interview anxiety. " +
+            "Recommend continuing weekly sessions for next month."
+        );
+        
+        // Keywords for categorization
+        newRecord.setKeyWords(Arrays.asList(
+            "anxiety",
+            "job-interview",
+            "CBT",
+            "relaxation-techniques",
+            "cognitive-reframing",
+            "homework-assigned"
+        ));
+        
+        // Create record
+        ClinicalHistory created = historyService.create(newRecord);
+        System.out.println("Created clinical history: " + created.getClinicHistoryCode());
+        System.out.println("Record ID: " + created.getClinicHistoryId());
+        
+        // Retrieve and display
+        ClinicalHistory retrieved = historyService.findById(created.getClinicHistoryId());
+        displayClinicalHistory(retrieved);
+        
+        // Update with follow-up notes
+        retrieved.setObservation(
+            retrieved.getObservation() + 
+            " \n\nFollow-up note: Patient contacted next day reporting " +
+            "successful use of relaxation techniques before sleep."
+        );
+        historyService.update(retrieved);
+        
+        // Clean up
+        emf.close();
+    }
+    
+    private static void displayClinicalHistory(ClinicalHistory history) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        
+        System.out.println("\n=== Clinical History Record ===");
+        System.out.println("Code: " + history.getClinicHistoryCode());
+        System.out.println("Date: " + dateFormat.format(history.getSessionDate()));
+        System.out.println("Psychologist: " + history.getPsychologistName());
+        System.out.println("\nContent:\n" + history.getContent());
+        System.out.println("\nObservation:\n" + history.getObservation());
+        System.out.println("\nConclusion:\n" + history.getConclusion());
+        System.out.println("\nKeywords: " + String.join(", ", history.getKeyWords()));
+        System.out.println("================================\n");
+    }
+}
+```
+
+## Working with Clinical History Files
+
+Clinical history records can have associated files (documents, test results, images):
+
+```java
+import com.bo.patientmanager.service.ClinicalHistoryFileService;
+import com.bo.patientmanager.model.ClinicalHistoryFile;
+
+public void attachFilesToHistory(Long historyId) {
+    ClinicalHistoryService historyService = new ClinicalHistoryService(emf);
+    ClinicalHistoryFileService fileService = new ClinicalHistoryFileService(emf);
+    
+    ClinicalHistory history = historyService.findById(historyId);
+    
+    // Create file attachment
+    ClinicalHistoryFile file = new ClinicalHistoryFile(
+        history,
+        "/files/assessments/anxiety-test-2024-03.pdf",
+        "PDF",
+        "Beck Anxiety Inventory results from March 2024 session",
+        Arrays.asList("anxiety-test", "BAI", "assessment")
+    );
+    
+    fileService.create(file);
+    System.out.println("Attached file to clinical history");
+}
+```
+
+## Search and Organization
+
+Use keywords for effective organization:
+
+```java
+public List<ClinicalHistory> findByKeyword(String keyword) {
+    List<ClinicalHistory> allRecords = clinicalHistoryService.findAll();
+    List<ClinicalHistory> matching = new ArrayList<>();
+    
+    for (ClinicalHistory history : allRecords) {
+        if (history.getKeyWords().contains(keyword)) {
+            matching.add(history);
+        }
+    }
+    
+    return matching;
+}
+
+// Usage
+List<ClinicalHistory> anxietyRecords = findByKeyword("anxiety");
+System.out.println("Found " + anxietyRecords.size() + " records about anxiety");
+```
+
+## Repository Layer
+
+The ClinicalHistoryService uses `ClinicalHistoryRepository` for data persistence:
+
+```java
+private final ClinicalHistoryRepository clinicalHistoryRepository;
+```
+
+The repository handles:
+- Clinical record persistence
+- Complex field storage (content up to 4000 characters)
+- Relationship management with files
+
+## Related Services
+
+- [ServiceManager](/api/service-manager) - Access point for all services
+- [PatientService](/api/patient-service) - Patient data associated with histories
+- [SessionService](/api/session-service) - Session scheduling related to history records
+
+## Best Practices
+
+1. **Consistent Coding**: Use a standardized format for `clinicHistoryCode` (e.g., "CH-YYYY-NNN")
+2. **Comprehensive Documentation**: Fill all fields thoroughly for complete clinical records
+3. **Keyword Strategy**: Use consistent, descriptive keywords for easy retrieval
+4. **Character Limits**: Be aware of 4000 character limits on content, observation, and conclusion fields
+5. **Privacy**: Ensure clinical history data is handled according to HIPAA/privacy regulations
+
+```java
+// Example validation
+public boolean validateClinicalHistory(ClinicalHistory history) {
+    if (history.getContent() != null && history.getContent().length() > 4000) {
+        System.err.println("Content exceeds 4000 characters");
+        return false;
+    }
+    if (history.getClinicHistoryCode() == null || history.getClinicHistoryCode().isEmpty()) {
+        System.err.println("Clinical history code is required");
+        return false;
+    }
+    return true;
+}
+```

@@ -1,0 +1,280 @@
+---
+title: 'PatientService'
+description: 'Service layer for managing patient data and operations'
+---
+
+## Overview
+
+The `PatientService` class provides business logic and data access methods for managing patient records. It acts as an intermediary between the application layer and the data persistence layer (PatientRepository).
+
+## Class Definition
+
+```java
+package com.bo.patientmanager.service;
+
+import com.bo.patientmanager.model.Patient;
+import com.bo.patientmanager.repository.PatientRepository;
+import jakarta.persistence.EntityManagerFactory;
+import java.util.List;
+
+public class PatientService {
+    private final PatientRepository patientRepository;
+}
+```
+
+## Constructor
+
+### PatientService(EntityManagerFactory emf)
+
+Creates a new PatientService instance with the specified EntityManagerFactory.
+
+<ParamField path="emf" type="EntityManagerFactory" required>
+  The JPA EntityManagerFactory for database operations
+</ParamField>
+
+**Example:**
+```java
+EntityManagerFactory emf = Persistence.createEntityManagerFactory("PatientManagerPU");
+PatientService patientService = new PatientService(emf);
+```
+
+## Methods
+
+### create(Patient p)
+
+Creates a new patient record in the database.
+
+<ParamField path="p" type="Patient" required>
+  The Patient object to create with all required fields populated:
+  - `name` - Patient's first name
+  - `lastName` - Patient's last name
+  - `birthday` - Date of birth
+  - `gender` - Gender identifier
+  - `phone1` - Primary contact phone
+  - `email` - Email address
+</ParamField>
+
+<ResponseField name="Patient" type="Patient">
+  The created Patient object with generated ID and persisted data
+</ResponseField>
+
+**Example:**
+```java
+Patient newPatient = new Patient();
+newPatient.setName("John");
+newPatient.setLastName("Doe");
+newPatient.setBirthday(new Date());
+newPatient.setGender("Male");
+newPatient.setPhone1("+1234567890");
+newPatient.setEmail("john.doe@example.com");
+newPatient.setAddress("123 Main St");
+newPatient.setCity("New York");
+newPatient.setCountry("USA");
+
+Patient created = patientService.create(newPatient);
+System.out.println("Created patient with ID: " + created.getPatientId());
+```
+
+---
+
+### update(Patient p)
+
+Updates an existing patient record in the database.
+
+<ParamField path="p" type="Patient" required>
+  The Patient object with updated fields. Must include the existing `patientId`.
+</ParamField>
+
+<ResponseField name="Patient" type="Patient">
+  The updated Patient object with all current data
+</ResponseField>
+
+**Example:**
+```java
+Patient patient = patientService.findById(1L);
+patient.setPhone1("+1987654321");
+patient.setEmail("newemail@example.com");
+patient.setAddress("456 Oak Avenue");
+
+Patient updated = patientService.update(patient);
+System.out.println("Updated patient: " + updated.getName());
+```
+
+---
+
+### findById(Long id)
+
+Retrieves a patient by their unique identifier.
+
+<ParamField path="id" type="Long" required>
+  The unique patient ID to search for
+</ParamField>
+
+<ResponseField name="Patient" type="Patient">
+  The Patient object if found, null otherwise
+</ResponseField>
+
+**Example:**
+```java
+Long patientId = 1L;
+Patient patient = patientService.findById(patientId);
+
+if (patient != null) {
+    System.out.println("Found patient: " + patient.getName() + " " + patient.getLastName());
+    System.out.println("Email: " + patient.getEmail());
+    System.out.println("Status: " + patient.getState());
+} else {
+    System.out.println("Patient not found");
+}
+```
+
+---
+
+### findAll()
+
+Retrieves all patient records from the database.
+
+<ResponseField name="List<Patient>" type="List<Patient>">
+  A list of all Patient objects in the database
+</ResponseField>
+
+**Example:**
+```java
+List<Patient> allPatients = patientService.findAll();
+
+System.out.println("Total patients: " + allPatients.size());
+
+for (Patient patient : allPatients) {
+    System.out.println(patient.getPatientId() + ": " + 
+                       patient.getName() + " " + 
+                       patient.getLastName() + 
+                       " (" + patient.getState() + ")");
+}
+```
+
+## Patient Entity Fields
+
+The Patient entity includes the following fields:
+
+### Identification
+- **patientId** (Long) - Auto-generated unique identifier
+- **name** (String) - First name
+- **lastName** (String) - Last name
+
+### Personal Information
+- **birthday** (Date) - Date of birth
+- **gender** (String) - Gender identifier
+- **avatar** (String) - Avatar image path or URL
+
+### Contact Information
+- **address** (String) - Street address
+- **city** (String) - City
+- **country** (String) - Country
+- **phone1** (String) - Primary phone number
+- **phone2** (String) - Secondary phone number
+- **email** (String) - Email address
+- **social** (String) - Social media or other contact
+
+### Clinical Information
+- **derivedFrom** (String) - Referral source
+- **derivedTo** (String) - Referral destination
+- **observations** (String, max 4000 chars) - Clinical observations and notes
+
+### Status
+- **isCurrentPatient** (boolean) - Whether the patient is currently active
+- **state** (Enum) - Patient status: ACTIVO, ALTA, ABANDONO, DERIVACION
+
+## Complete Usage Example
+
+```java
+import com.bo.patientmanager.service.PatientService;
+import com.bo.patientmanager.model.Patient;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Persistence;
+import java.util.Date;
+import java.util.List;
+
+public class PatientManagementExample {
+    public static void main(String[] args) {
+        // Initialize service
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("PatientManagerPU");
+        PatientService patientService = new PatientService(emf);
+        
+        // Create new patient
+        Patient newPatient = new Patient(
+            "Jane",
+            "Smith",
+            new Date(90, 5, 15), // June 15, 1990
+            "Female",
+            "/avatars/jane.jpg",
+            "789 Elm Street",
+            "Los Angeles",
+            "USA",
+            "+1555123456",
+            "+1555654321",
+            "jane.smith@example.com",
+            "@janesmith",
+            "Dr. Johnson",
+            "Initial consultation completed. Patient presents with anxiety symptoms."
+        );
+        
+        Patient created = patientService.create(newPatient);
+        System.out.println("Created patient ID: " + created.getPatientId());
+        
+        // Retrieve patient
+        Patient retrieved = patientService.findById(created.getPatientId());
+        System.out.println("Patient name: " + retrieved.getName() + " " + retrieved.getLastName());
+        
+        // Update patient
+        retrieved.setPhone1("+1555999888");
+        retrieved.setInitialObservations("Patient showing progress in therapy sessions.");
+        Patient updated = patientService.update(retrieved);
+        
+        // List all patients
+        List<Patient> allPatients = patientService.findAll();
+        System.out.println("Total patients in system: " + allPatients.size());
+        
+        // Clean up
+        emf.close();
+    }
+}
+```
+
+## Repository Layer
+
+The PatientService uses `PatientRepository` for data persistence:
+
+```java
+private final PatientRepository patientRepository;
+```
+
+The repository handles all JPA operations including:
+- Entity persistence and transactions
+- Query execution
+- Entity state management
+
+## Related Services
+
+- [ServiceManager](/api/service-manager) - Access point for all services
+- [SessionService](/api/session-service) - Manage patient therapy sessions
+- [RelativeService](/api/relative-service) - Manage patient family members
+- [ClinicalHistoryService](/api/clinical-history-service) - Manage clinical records
+
+## Error Handling
+
+While the service methods don't explicitly throw exceptions, be aware of potential JPA exceptions:
+
+- **EntityNotFoundException** - When updating or finding non-existent entities
+- **PersistenceException** - For database constraint violations
+- **TransactionRequiredException** - When operations require active transactions
+
+Wrap service calls in try-catch blocks for production use:
+
+```java
+try {
+    Patient patient = patientService.findById(id);
+    // Process patient
+} catch (Exception e) {
+    System.err.println("Error accessing patient: " + e.getMessage());
+}
+```
